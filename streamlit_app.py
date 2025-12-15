@@ -131,9 +131,19 @@ if st.session_state.step == "quiz":
         ("Le respect éthique est :", ["Essentiel", "Secondaire"], 0),
     ]
 
-    reponses = []
+    # Initialiser les réponses dans la session si elles n'existent pas
+    if "reponses" not in st.session_state or st.session_state.get("reset_quiz", False):
+        st.session_state.reponses = [None] * len(questions)
+        st.session_state.reset_quiz = False
+
+    # Afficher les questions
     for i, (q, options, _) in enumerate(questions):
-        reponses.append(st.radio(q, options, key=i))
+        st.session_state.reponses[i] = st.radio(
+            q,
+            options,
+            index=0 if st.session_state.reponses[i] is None else options.index(st.session_state.reponses[i]),
+            key=i
+        )
 
     if st.button("Valider le QCM"):
         score = 0
@@ -141,7 +151,7 @@ if st.session_state.step == "quiz":
 
         for i, (q, options, bonne) in enumerate(questions):
             bonne_rep = options[bonne]
-            user_rep = reponses[i]
+            user_rep = st.session_state.reponses[i]
             ok = user_rep == bonne_rep
             if ok:
                 score += 1
@@ -162,6 +172,31 @@ if st.session_state.step == "quiz":
         st.markdown("---")
         st.subheader(f"Score : {score}/10 — {resultat}")
 
+        # Correction détaillée
+        st.markdown("### Correction détaillée")
+        for q, user, bonne, ok in corrections:
+            if ok:
+                st.success(f"{q} → Bonne réponse : {bonne}")
+            else:
+                st.error(f"{q} → Ta réponse : {user} | Bonne réponse : {bonne}")
+
+        # Diplôme
+        if resultat == "Réussi":
+            pdf = creer_diplome(
+                st.session_state.nom,
+                st.session_state.prenom,
+                score
+            )
+            st.download_button(
+                "Télécharger le diplôme PDF",
+                pdf,
+                file_name="diplome_CNGE.pdf"
+            )
+
+    # Bouton pour refaire le QCM
+    if st.button("🔁 Refaire le QCM"):
+        st.session_state.reset_quiz = True
+        st.experimental_rerun()
         # -------- CORRECTION --------
         st.markdown("### Correction détaillée")
         for q, user, bonne, ok in corrections:
