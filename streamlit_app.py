@@ -16,6 +16,8 @@ ADMINS = [
     ("steen", "johanna")
 ]
 
+LOGO_PATH = "/mnt/data/67d1a978-27f2-4625-8a21-ea51b5b664b9.png"  # Logo CNGE
+
 # ================= CSV =================
 if not os.path.exists(RESULT_FILE):
     pd.DataFrame(
@@ -27,7 +29,21 @@ def creer_diplome(nom, prenom, score):
     pdf = FPDF()
     pdf.add_page()
 
+    # --- FILIGRANE CNGE en diagonale ---
+    pdf.set_text_color(200, 200, 200)  # Gris clair pour filigrane
+    pdf.set_font("Arial", "B", 80)
+    pdf.set_xy(10, 100)
+    pdf.rotate(45, x=105, y=150)  # rotation autour du centre approximatif
+    pdf.text(x=30, y=150, txt="CNGE")
+    pdf.rotate(0)  # remettre rotation normale
+    pdf.set_text_color(0, 0, 0)  # remettre noir
+
+    # --- LOGO CNGE en haut ---
+    pdf.image(LOGO_PATH, x=75, y=10, w=60)  # centré en haut
+
+    # --- Titre ---
     pdf.set_font("Arial", "B", 16)
+    pdf.ln(60)  # espace après logo
     pdf.cell(0, 10, "CNGE FORMATION", ln=True, align="C")
 
     pdf.ln(10)
@@ -67,6 +83,15 @@ def creer_diplome(nom, prenom, score):
         "https://www.cnge-formation.fr/",
         align="C"
     )
+
+    # --- Texte supplémentaire dans un encadré ---
+    pdf.ln(4)
+    pdf.set_font("Arial", "", 10)
+    pdf.set_fill_color(230, 230, 230)  # gris clair
+    txt = ("This ICH E6 GCP Investigator Site Training meets the Minimum Criteria for "
+           "ICH GCP Investigator Site Personnel Training identified by TransCelerate BioPharma "
+           "as necessary to enable mutual recognition of GCP training among trial sponsors.")
+    pdf.multi_cell(0, 6, txt, border=1, align="C", fill=True)
 
     buffer = BytesIO()
     buffer.write(pdf.output(dest="S").encode("latin-1"))
@@ -131,18 +156,15 @@ if st.session_state.step == "quiz":
         ("Le respect éthique est :", ["Essentiel", "Secondaire"], 0),
     ]
 
-    # Initialiser les réponses dans la session si elles n'existent pas
-    if "reponses" not in st.session_state or st.session_state.get("reset_quiz", False):
-        st.session_state.reponses = [None] * len(questions)
-        st.session_state.reset_quiz = False
+    if "reponses_quiz" not in st.session_state:
+        st.session_state.reponses_quiz = [None] * len(questions)
 
-    # Afficher les questions
     for i, (q, options, _) in enumerate(questions):
-        st.session_state.reponses[i] = st.radio(
+        st.session_state.reponses_quiz[i] = st.radio(
             q,
             options,
-            index=0 if st.session_state.reponses[i] is None else options.index(st.session_state.reponses[i]),
-            key=i
+            index=0 if st.session_state.reponses_quiz[i] is None else options.index(st.session_state.reponses_quiz[i]),
+            key=f"q{i}"
         )
 
     if st.button("Valider le QCM"):
@@ -150,8 +172,8 @@ if st.session_state.step == "quiz":
         corrections = []
 
         for i, (q, options, bonne) in enumerate(questions):
+            user_rep = st.session_state.reponses_quiz[i]
             bonne_rep = options[bonne]
-            user_rep = st.session_state.reponses[i]
             ok = user_rep == bonne_rep
             if ok:
                 score += 1
@@ -182,11 +204,7 @@ if st.session_state.step == "quiz":
 
         # Diplôme
         if resultat == "Réussi":
-            pdf = creer_diplome(
-                st.session_state.nom,
-                st.session_state.prenom,
-                score
-            )
+            pdf = creer_diplome(st.session_state.nom, st.session_state.prenom, score)
             st.download_button(
                 "Télécharger le diplôme PDF",
                 pdf,
@@ -195,29 +213,5 @@ if st.session_state.step == "quiz":
 
     # Bouton pour refaire le QCM
     if st.button("🔁 Refaire le QCM"):
-        st.session_state.reset_quiz = True
+        st.session_state.reponses_quiz = [None] * len(questions)
         st.experimental_rerun()
-        # -------- CORRECTION --------
-        st.markdown("### Correction détaillée")
-        for q, user, bonne, ok in corrections:
-            if ok:
-                st.success(f"{q} → Bonne réponse : {bonne}")
-            else:
-                st.error(f"{q} → Ta réponse : {user} | Bonne réponse : {bonne}")
-
-        # -------- DIPLOME --------
-        if resultat == "Réussi":
-            pdf = creer_diplome(
-                st.session_state.nom,
-                st.session_state.prenom,
-                score
-            )
-            st.download_button(
-                "Télécharger le diplôme PDF",
-                pdf,
-                file_name="diplome_CNGE.pdf"
-            )
-
-        if st.button("🔁 Refaire le QCM"):
-            st.session_state.step = "quiz"
-            st.experimental_rerun()
