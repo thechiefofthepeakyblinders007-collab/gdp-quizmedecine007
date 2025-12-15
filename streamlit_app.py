@@ -1,9 +1,8 @@
 import streamlit as st
 import pandas as pd
 from fpdf import FPDF
-from io import BytesIO
-import os
 from datetime import date
+import os
 
 # ================= CONFIG =================
 st.set_page_config(page_title="QCM Formation", layout="centered")
@@ -29,21 +28,21 @@ def creer_diplome(nom, prenom, score):
     pdf = FPDF()
     pdf.add_page()
 
-    # --- FILIGRANE CNGE en diagonale ---
-    pdf.set_text_color(200, 200, 200)  # Gris clair pour filigrane
+    # --- FILIGRANE CNGE ---
+    pdf.set_text_color(200, 200, 200)
     pdf.set_font("Arial", "B", 80)
     pdf.set_xy(10, 100)
-    pdf.rotate(45, x=105, y=150)  # rotation autour du centre approximatif
+    pdf.rotate(45, x=105, y=150)
     pdf.text(x=30, y=150, txt="CNGE")
-    pdf.rotate(0)  # remettre rotation normale
-    pdf.set_text_color(0, 0, 0)  # remettre noir
+    pdf.rotate(0)
+    pdf.set_text_color(0, 0, 0)
 
-    # --- LOGO CNGE en haut ---
-    pdf.image(LOGO_PATH, x=75, y=10, w=60)  # centré en haut
+    # --- LOGO CNGE ---
+    pdf.image(LOGO_PATH, x=75, y=10, w=60)
 
-    # --- Titre ---
+    # --- Texte du diplôme ---
     pdf.set_font("Arial", "B", 16)
-    pdf.ln(60)  # espace après logo
+    pdf.ln(60)
     pdf.cell(0, 10, "CNGE FORMATION", ln=True, align="C")
 
     pdf.ln(10)
@@ -57,8 +56,7 @@ def creer_diplome(nom, prenom, score):
     pdf.ln(8)
     pdf.set_font("Arial", "", 12)
     pdf.multi_cell(
-        0,
-        8,
+        0, 8,
         "has completed the e-learning course\n\n"
         "RECHERCHE EN SOINS PREMIERS\n"
         "Formation aux bonnes pratiques cliniques\n"
@@ -76,8 +74,7 @@ def creer_diplome(nom, prenom, score):
     pdf.ln(10)
     pdf.set_font("Arial", "I", 10)
     pdf.multi_cell(
-        0,
-        6,
+        0, 6,
         "This e-learning course has been formally recognised for its quality and content by:\n\n"
         "Collège National des Généralistes Enseignants Formation\n"
         "https://www.cnge-formation.fr/",
@@ -87,16 +84,13 @@ def creer_diplome(nom, prenom, score):
     # --- Texte supplémentaire dans un encadré ---
     pdf.ln(4)
     pdf.set_font("Arial", "", 10)
-    pdf.set_fill_color(230, 230, 230)  # gris clair
+    pdf.set_fill_color(230, 230, 230)
     txt = ("This ICH E6 GCP Investigator Site Training meets the Minimum Criteria for "
            "ICH GCP Investigator Site Personnel Training identified by TransCelerate BioPharma "
            "as necessary to enable mutual recognition of GCP training among trial sponsors.")
     pdf.multi_cell(0, 6, txt, border=1, align="C", fill=True)
 
-    buffer = BytesIO()
-    buffer.write(pdf.output(dest="S").encode("latin-1"))
-    buffer.seek(0)
-    return buffer
+    return pdf.output(dest="S").encode("latin-1")
 
 # ================= SESSION =================
 if "step" not in st.session_state:
@@ -158,7 +152,10 @@ if st.session_state.step == "quiz":
 
     if "reponses_quiz" not in st.session_state:
         st.session_state.reponses_quiz = [None] * len(questions)
+    if "quiz_done" not in st.session_state:
+        st.session_state.quiz_done = False
 
+    # Affichage des questions
     for i, (q, options, _) in enumerate(questions):
         st.session_state.reponses_quiz[i] = st.radio(
             q,
@@ -167,7 +164,8 @@ if st.session_state.step == "quiz":
             key=f"q{i}"
         )
 
-    if st.button("Valider le QCM"):
+    # Validation du QCM
+    if st.button("Valider le QCM") and not st.session_state.quiz_done:
         score = 0
         corrections = []
 
@@ -181,15 +179,24 @@ if st.session_state.step == "quiz":
 
         resultat = "Réussi" if score >= 7 else "Échoué"
 
+        # Enregistrement dans le CSV (écrase si même nom/prénom)
         df = pd.read_csv(RESULT_FILE)
-        df.loc[len(df)] = [
-            st.session_state.nom,
-            st.session_state.prenom,
-            st.session_state.email,
-            f"{score}/10",
-            resultat
-        ]
+        mask = (df['Nom'] == st.session_state.nom) & (df['Prénom'] == st.session_state.prenom)
+        if mask.any():
+            df.loc[mask, ['Email', 'Score', 'Résultat']] = [
+                st.session_state.email, f"{score}/10", resultat
+            ]
+        else:
+            df.loc[len(df)] = [
+                st.session_state.nom,
+                st.session_state.prenom,
+                st.session_state.email,
+                f"{score}/10",
+                resultat
+            ]
         df.to_csv(RESULT_FILE, index=False)
+
+        st.session_state.quiz_done = True
 
         st.markdown("---")
         st.subheader(f"Score : {score}/10 — {resultat}")
@@ -204,14 +211,15 @@ if st.session_state.step == "quiz":
 
         # Diplôme
         if resultat == "Réussi":
-            pdf = creer_diplome(st.session_state.nom, st.session_state.prenom, score)
+            pdf_bytes = creer_diplome(st.session_state.nom, st.session_state.prenom, score)
             st.download_button(
                 "Télécharger le diplôme PDF",
-                pdf,
+                pdf_bytes,
                 file_name="diplome_CNGE.pdf"
             )
 
-    # Bouton pour refaire le QCM
-    if st.button("🔁 Refaire le QCM"):
-        st.session_state.reponses_quiz = [None] * len(questions)
-        st.experimental_rerun()
+    # Bouton pour refaire le QCM si non terminé
+    if not st.session_state.quiz_done:
+        if st.button("🔁 Refaire le QCM"):
+            st.session_state.reponses_quiz = [None] * len(questions)
+            st.experimental_rerun()
