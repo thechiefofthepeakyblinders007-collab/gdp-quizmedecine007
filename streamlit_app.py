@@ -25,9 +25,12 @@ def creer_diplome(nom, prenom, score):
     pdf = FPDF()
     pdf.add_page()
 
-    # Sauvegarde temporaire du logo depuis Base64
+    # Décoder la chaîne Base64 en bytes
+    logo_bytes = base64.b64decode(LOGO_BASE64)
+
+    # Sauvegarder les bytes dans un fichier temporaire
     with open("logo_temp.png", "wb") as f:
-        f.write(base64.b64decode(LOGO_BASE64))
+        f.write(logo_bytes)
 
     # Ajout du logo en haut du diplôme
     pdf.image("logo_temp.png", x=85, y=10, w=40)
@@ -196,3 +199,4 @@ if st.session_state.step == "quiz":
     if st.button("🔁 Refaire le QCM"):
         st.session_state.reponses_quiz = [None] * len(questions)
         st.experimental_rerun()
+
