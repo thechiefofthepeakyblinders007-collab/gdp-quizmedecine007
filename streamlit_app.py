@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 import pandas as pd
 from fpdf import FPDF
@@ -13,8 +14,8 @@ RESULT_FILE = "resultats_quiz.csv"
 ADMINS = [("bayen", "marc"), ("steen", "johanna")]
 
 # ================= LOGO EN BASE64 =================
-# Logo converti depuis le fichier uploadé
-
+# Remplace cette chaîne par le Base64 de ton logo
+LOGO_BASE64 = ""
 
 # ================= CSV =================
 if not os.path.exists(RESULT_FILE):
@@ -34,8 +35,9 @@ def creer_diplome(nom, prenom, score):
     pdf.rotate(0)
     pdf.set_text_color(0, 0, 0)
 
-    # Logo CNGE depuis Base64
-   
+    # Logo CNGE depuis Base64 (à décommenter si tu as un logo)
+    # if LOGO_BASE64:
+    #     pdf.image(LOGO_BASE64, x=85, y=10, w=40)
 
     # Texte du diplôme
     pdf.set_font("Arial", "B", 16)
@@ -81,33 +83,19 @@ def creer_diplome(nom, prenom, score):
 
     return pdf.output(dest="S").encode("latin-1")
 
-# ================= SESSION, LOGIN, QUIZ =================
-# Ici, tu peux copier le code complet du QCM que je t'ai fourni auparavant
-# avec st.session_state pour login stable, quiz refait autant de fois que voulu,
-# CSV mis à jour et téléchargement du PDF.
-
-
 # ================= SESSION / LOGIN / QUIZ =================
-# (ici tu peux copier tout le reste de mon code précédent,
-# en utilisant st.session_state pour login stable,
-# quiz refait autant de fois que voulu, CSV mis à jour etc.)
-
-
-# ================= SESSION =================
 if "step" not in st.session_state:
     st.session_state.step = "login"
 
 # ================= LOGIN =================
 if st.session_state.step == "login":
-
-    # Initialisation session_state pour inputs
     for key in ["nom_input", "prenom_input", "email_input"]:
         if key not in st.session_state:
             st.session_state[key] = ""
 
     nom = st.text_input("Nom", value=st.session_state.nom_input)
     prenom = st.text_input("Prénom", value=st.session_state.prenom_input)
-    is_admin = (nom.lower(), prenom.lower()) in ADMINS
+    is_admin = (nom.lower(), prenom.lower()) in [(a[0].lower(), a[1].lower()) for a in ADMINS]
     email = st.text_input("Email", value=st.session_state.email_input) if not is_admin else ""
 
     if st.button("Continuer"):
@@ -115,9 +103,9 @@ if st.session_state.step == "login":
         st.session_state.prenom_input = prenom.strip()
         st.session_state.email_input = email.strip()
 
-        if st.session_state.nom_input == "" or st.session_state.prenom_input == "":
+        if not st.session_state.nom_input or not st.session_state.prenom_input:
             st.warning("Merci de remplir le nom et le prénom")
-        elif not is_admin and st.session_state.email_input == "":
+        elif not is_admin and not st.session_state.email_input:
             st.warning("Merci de renseigner votre email")
         else:
             st.session_state.nom = st.session_state.nom_input
