@@ -2,7 +2,8 @@ import streamlit as st
 import pandas as pd
 from fpdf import FPDF
 from datetime import date
-import os
+from io import BytesIO
+import base64
 
 # ================= CONFIG =================
 st.set_page_config(page_title="QCM Formation", layout="centered")
@@ -15,8 +16,10 @@ ADMINS = [
     ("steen", "johanna")
 ]
 
-# Assurez-vous que le fichier logo se trouve dans le même dossier que ce script
-LOGO_PATH = "logo_cnge.png"  # Nom du fichier PNG
+# ================= LOGO =================
+# Intégration du logo en base64 pour éviter les problèmes de fichier
+with open("logo_cnge.png", "rb") as f:
+    LOGO_BASE64 = base64.b64encode(f.read()).decode("utf-8")
 
 # ================= CSV =================
 if not os.path.exists(RESULT_FILE):
@@ -26,10 +29,6 @@ if not os.path.exists(RESULT_FILE):
 
 # ================= PDF DIPLOME =================
 def creer_diplome(nom, prenom, score):
-    if not os.path.exists(LOGO_PATH):
-        st.error(f"Logo introuvable : {LOGO_PATH}")
-        return None
-
     pdf = FPDF()
     pdf.add_page()
 
@@ -42,8 +41,10 @@ def creer_diplome(nom, prenom, score):
     pdf.rotate(0)
     pdf.set_text_color(0, 0, 0)
 
-    # --- LOGO CNGE ---
-    pdf.image(LOGO_PATH, x=75, y=10, w=60)
+    # --- LOGO CNGE depuis base64 ---
+    logo_bytes = base64.b64decode(LOGO_BASE64)
+    logo_io = BytesIO(logo_bytes)
+    pdf.image(logo_io, x=75, y=10, w=60)
 
     # --- TEXTE DU DIPLOME ---
     pdf.set_font("Arial", "B", 16)
@@ -102,28 +103,30 @@ if "step" not in st.session_state:
 
 # ================= LOGIN =================
 if st.session_state.step == "login":
-    nom = st.text_input("Nom")
-    prenom = st.text_input("Prénom")
 
+    # Initialisation session_state pour inputs
+    for key in ["nom_input", "prenom_input", "email_input"]:
+        if key not in st.session_state:
+            st.session_state[key] = ""
+
+    nom = st.text_input("Nom", value=st.session_state.nom_input)
+    prenom = st.text_input("Prénom", value=st.session_state.prenom_input)
     is_admin = (nom.lower(), prenom.lower()) in ADMINS
-
-    email = ""
-    if not is_admin:
-        email = st.text_input("Email")
+    email = st.text_input("Email", value=st.session_state.email_input) if not is_admin else ""
 
     if st.button("Continuer"):
-        nom = nom.strip()
-        prenom = prenom.strip()
-        email = email.strip()
+        st.session_state.nom_input = nom.strip()
+        st.session_state.prenom_input = prenom.strip()
+        st.session_state.email_input = email.strip()
 
-        if nom == "" or prenom == "":
+        if st.session_state.nom_input == "" or st.session_state.prenom_input == "":
             st.warning("Merci de remplir le nom et le prénom")
-        elif not is_admin and email == "":
+        elif not is_admin and st.session_state.email_input == "":
             st.warning("Merci de renseigner votre email")
         else:
-            st.session_state.nom = nom
-            st.session_state.prenom = prenom
-            st.session_state.email = email
+            st.session_state.nom = st.session_state.nom_input
+            st.session_state.prenom = st.session_state.prenom_input
+            st.session_state.email = st.session_state.email_input
             st.session_state.is_admin = is_admin
             st.session_state.step = "admin" if is_admin else "quiz"
 
@@ -157,7 +160,6 @@ if st.session_state.step == "quiz":
     if "reponses_quiz" not in st.session_state:
         st.session_state.reponses_quiz = [None] * len(questions)
 
-    # Affichage des questions
     for i, (q, options, _) in enumerate(questions):
         st.session_state.reponses_quiz[i] = st.radio(
             q,
@@ -166,7 +168,6 @@ if st.session_state.step == "quiz":
             key=f"q{i}"
         )
 
-    # Validation du QCM
     if st.button("Valider le QCM"):
         score = 0
         corrections = []
@@ -174,14 +175,13 @@ if st.session_state.step == "quiz":
         for i, (q, options, bonne) in enumerate(questions):
             user_rep = st.session_state.reponses_quiz[i]
             bonne_rep = options[bonne]
-            ok = user_rep == bonne_rep
-            if ok:
+            if user_rep == bonne_rep:
                 score += 1
-            corrections.append((q, user_rep, bonne_rep, ok))
+            corrections.append((q, user_rep, bonne_rep, user_rep == bonne_rep))
 
         resultat = "Réussi" if score >= 7 else "Échoué"
 
-        # Enregistrement dans le CSV
+        # Enregistrement CSV
         df = pd.read_csv(RESULT_FILE)
         mask = (df['Nom'] == st.session_state.nom) & (df['Prénom'] == st.session_state.prenom) & (df['Email'] == st.session_state.email)
         if mask.any():
@@ -199,7 +199,6 @@ if st.session_state.step == "quiz":
         st.markdown("---")
         st.subheader(f"Score : {score}/10 — {resultat}")
 
-        # Correction détaillée
         st.markdown("### Correction détaillée")
         for q, user, bonne, ok in corrections:
             if ok:
@@ -207,7 +206,6 @@ if st.session_state.step == "quiz":
             else:
                 st.error(f"{q} → Ta réponse : {user} | Bonne réponse : {bonne}")
 
-        # Diplôme si réussi
         if resultat == "Réussi":
             pdf_bytes = creer_diplome(st.session_state.nom, st.session_state.prenom, score)
             if pdf_bytes:
@@ -217,7 +215,6 @@ if st.session_state.step == "quiz":
                     file_name="diplome_CNGE.pdf"
                 )
 
-    # Bouton pour refaire le QCM
     if st.button("🔁 Refaire le QCM"):
         st.session_state.reponses_quiz = [None] * len(questions)
         st.experimental_rerun()
