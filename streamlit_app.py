@@ -3,9 +3,7 @@ import streamlit as st
 import pandas as pd
 from fpdf import FPDF
 from datetime import date
-from io import BytesIO
 import base64
-import requests
 
 # ================= CONFIG =================
 st.set_page_config(page_title="QCM Formation", layout="centered")
@@ -13,9 +11,6 @@ st.title("QCM – Recherche en Soins Premiers")
 
 RESULT_FILE = "resultats_quiz.csv"
 ADMINS = [("bayen", "marc"), ("steen", "johanna")]
-
-# URL de l'image du logo
-LOGO_URL = "https://mistralaichatupprodswe.blob.core.windows.net/chat-images/f4/26/d1/f426d13e-875f-4fd9-899f-49c94b257c5b/38758a3a-e4b5-4132-b44c-65dd45256afa/8c637623-b200-4d1f-b714-899adac55ed7?sv=2025-01-05&st=2025-12-15T17%3A59%3A20Z&se=2025-12-15T18%3A59%3A20Z&sr=b&sp=rade&sig=eqPN%2FR3sxFUbUpif9XBZ8dVMhoVwLdBvVeLXhIQH2Ps%3D"
 
 # ================= CSV =================
 if not os.path.exists(RESULT_FILE):
@@ -26,17 +21,20 @@ def creer_diplome(nom, prenom, score):
     pdf = FPDF()
     pdf.add_page()
 
-    # Télécharger l'image depuis l'URL
-    response = requests.get(LOGO_URL)
-    with open("logo_temp.png", "wb") as f:
-        f.write(response.content)
+    # Ajout du texte "CNGE FORMATION" en haut du diplôme
+    pdf.set_font("Arial", "B", 20)
+    pdf.set_text_color(192, 57, 43)  # Couleur rouge pour CNGE
+    pdf.cell(0, 10, "CNGE", ln=True, align="C")
+    pdf.set_text_color(241, 196, 15)  # Couleur orange pour FORMATION
+    pdf.cell(0, 10, "FORMATION", ln=True, align="C")
 
-    # Ajout du logo en haut du diplôme
-    pdf.image("logo_temp.png", x=85, y=10, w=40)
+    # Ajout d'une ligne décorative
+    pdf.line(30, 40, 180, 40)
 
     # Texte du diplôme
+    pdf.set_text_color(0, 0, 0)  # Réinitialiser la couleur du texte à noir
     pdf.set_font("Arial", "B", 16)
-    pdf.ln(30)
+    pdf.ln(20)
     pdf.cell(0, 10, "CNGE FORMATION", ln=True, align="C")
     pdf.ln(5)
     pdf.set_font("Arial", "", 12)
@@ -75,9 +73,6 @@ def creer_diplome(nom, prenom, score):
            "ICH GCP Investigator Site Personnel Training identified by TransCelerate BioPharma "
            "as necessary to enable mutual recognition of GCP training among trial sponsors.")
     pdf.multi_cell(0, 5, txt, border=1, align="C", fill=True)
-
-    # Suppression du fichier temporaire
-    os.remove("logo_temp.png")
 
     return pdf.output(dest="S").encode("latin-1")
 
@@ -198,3 +193,4 @@ if st.session_state.step == "quiz":
     if st.button("🔁 Refaire le QCM"):
         st.session_state.reponses_quiz = [None] * len(questions)
         st.experimental_rerun()
+
