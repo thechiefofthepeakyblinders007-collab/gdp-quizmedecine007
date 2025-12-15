@@ -14,72 +14,68 @@ RESULT_FILE = "resultats_quiz.csv"
 ADMINS = [("bayen", "marc"), ("steen", "johanna")]
 
 # ================= LOGO EN BASE64 =================
-# Remplace cette chaîne par le Base64 de ton logo
-LOGO_BASE64 = ""
+LOGO_BASE64 = "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"
 
 # ================= CSV =================
 if not os.path.exists(RESULT_FILE):
-    pd.DataFrame(columns=["Nom", "Prénom", "Email", "Score", "Résultat"]).to_csv(RESULT_FILE, index=False)
+    pd.DataFrame(columns=["Nom", "Prénom", "Email", "Score", "Résultat", "Date"]).to_csv(RESULT_FILE, index=False)
 
 # ================= PDF DIPLOME =================
 def creer_diplome(nom, prenom, score):
     pdf = FPDF()
     pdf.add_page()
 
-    # Filigrane CNGE
-    pdf.set_text_color(200, 200, 200)
-    pdf.set_font("Arial", "B", 80)
-    pdf.set_xy(10, 100)
-    pdf.rotate(45, x=105, y=150)
-    pdf.text(x=30, y=150, txt="CNGE")
-    pdf.rotate(0)
-    pdf.set_text_color(0, 0, 0)
+    # Sauvegarde temporaire du logo depuis Base64
+    with open("logo_temp.png", "wb") as f:
+        f.write(base64.b64decode(LOGO_BASE64.split(",")[-1]))
 
-    # Logo CNGE depuis Base64 (à décommenter si tu as un logo)
-    # if LOGO_BASE64:
-    #     pdf.image(LOGO_BASE64, x=85, y=10, w=40)
+    # Ajout du logo en haut du diplôme
+    pdf.image("logo_temp.png", x=85, y=10, w=40)
 
     # Texte du diplôme
     pdf.set_font("Arial", "B", 16)
-    pdf.ln(60)
+    pdf.ln(30)
     pdf.cell(0, 10, "CNGE FORMATION", ln=True, align="C")
-    pdf.ln(10)
+    pdf.ln(5)
     pdf.set_font("Arial", "", 12)
     pdf.cell(0, 8, "Hereby certifies that", ln=True, align="C")
-    pdf.ln(8)
+    pdf.ln(5)
     pdf.set_font("Arial", "B", 18)
     pdf.cell(0, 10, f"{prenom} {nom}", ln=True, align="C")
-    pdf.ln(8)
+    pdf.ln(5)
     pdf.set_font("Arial", "", 12)
     pdf.multi_cell(
-        0, 8,
+        0, 6,
         "has completed the e-learning course\n\n"
         "RECHERCHE EN SOINS PREMIERS\n"
         "Formation aux bonnes pratiques cliniques\n"
         "(ICH E6 (R3))",
         align="C"
     )
-    pdf.ln(6)
+    pdf.ln(5)
     pdf.cell(0, 8, f"with a score of {score*10} %", ln=True, align="C")
-    pdf.ln(6)
+    pdf.ln(5)
     today = date.today().strftime("%d/%m/%Y")
     pdf.cell(0, 8, f"On {today}", ln=True, align="C")
-    pdf.ln(10)
+    pdf.ln(5)
     pdf.set_font("Arial", "I", 10)
     pdf.multi_cell(
-        0, 6,
+        0, 5,
         "This e-learning course has been formally recognised for its quality and content by:\n\n"
         "Collège National des Généralistes Enseignants Formation\n"
         "https://www.cnge-formation.fr/",
         align="C"
     )
-    pdf.ln(4)
+    pdf.ln(5)
     pdf.set_font("Arial", "", 10)
     pdf.set_fill_color(230, 230, 230)
     txt = ("This ICH E6 GCP Investigator Site Training meets the Minimum Criteria for "
            "ICH GCP Investigator Site Personnel Training identified by TransCelerate BioPharma "
            "as necessary to enable mutual recognition of GCP training among trial sponsors.")
-    pdf.multi_cell(0, 6, txt, border=1, align="C", fill=True)
+    pdf.multi_cell(0, 5, txt, border=1, align="C", fill=True)
+
+    # Suppression du fichier temporaire
+    os.remove("logo_temp.png")
 
     return pdf.output(dest="S").encode("latin-1")
 
@@ -165,19 +161,16 @@ if st.session_state.step == "quiz":
 
         resultat = "Réussi" if score >= 7 else "Échoué"
 
-        # Enregistrement CSV
+        # Enregistrement CSV (toujours ajouter une nouvelle ligne)
         df = pd.read_csv(RESULT_FILE)
-        mask = (df['Nom'] == st.session_state.nom) & (df['Prénom'] == st.session_state.prenom) & (df['Email'] == st.session_state.email)
-        if mask.any():
-            df.loc[mask, ['Score', 'Résultat']] = [f"{score}/10", resultat]
-        else:
-            df.loc[len(df)] = [
-                st.session_state.nom,
-                st.session_state.prenom,
-                st.session_state.email,
-                f"{score}/10",
-                resultat
-            ]
+        df.loc[len(df)] = [
+            st.session_state.nom,
+            st.session_state.prenom,
+            st.session_state.email,
+            f"{score}/10",
+            resultat,
+            date.today().strftime("%d/%m/%Y")
+        ]
         df.to_csv(RESULT_FILE, index=False)
 
         st.markdown("---")
