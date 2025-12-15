@@ -62,15 +62,21 @@ if st.session_state.step == "login":
     if not is_admin:
         email = st.text_input("Email")
 
-    if st.button("Continuer"):
-        if nom and prenom and (is_admin or email):
-            st.session_state.nom = nom
-            st.session_state.prenom = prenom
-            st.session_state.email = email
-            st.session_state.is_admin = is_admin
-            st.session_state.step = "admin" if is_admin else "quiz"
-        else:
-            st.warning("Merci de remplir tous les champs")
+   if st.button("Continuer"):
+    nom = nom.strip()
+    prenom = prenom.strip()
+    email = email.strip()
+
+    if nom == "" or prenom == "":
+        st.warning("Merci de remplir le nom et le prénom")
+    elif not is_admin and email == "":
+        st.warning("Merci de renseigner votre email")
+    else:
+        st.session_state.nom = nom
+        st.session_state.prenom = prenom
+        st.session_state.email = email
+        st.session_state.is_admin = is_admin
+        st.session_state.step = "admin" if is_admin else "quiz"
 
 # ---------------- ADMIN ----------------
 if st.session_state.step == "admin":
