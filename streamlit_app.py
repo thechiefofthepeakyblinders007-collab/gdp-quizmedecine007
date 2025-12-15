@@ -15,7 +15,8 @@ ADMINS = [
     ("steen", "johanna")
 ]
 
-LOGO_PATH = "/mnt/data/67d1a978-27f2-4625-8a21-ea51b5b664b9.png"  # Logo CNGE
+# Assurez-vous que le fichier logo se trouve dans le même dossier que ce script
+LOGO_PATH = "logo_cnge.png"  # Nom du fichier PNG
 
 # ================= CSV =================
 if not os.path.exists(RESULT_FILE):
@@ -25,10 +26,14 @@ if not os.path.exists(RESULT_FILE):
 
 # ================= PDF DIPLOME =================
 def creer_diplome(nom, prenom, score):
+    if not os.path.exists(LOGO_PATH):
+        st.error(f"Logo introuvable : {LOGO_PATH}")
+        return None
+
     pdf = FPDF()
     pdf.add_page()
 
-    # --- FILIGRANE CNGE ---
+    # --- FILIGRANE ---
     pdf.set_text_color(200, 200, 200)
     pdf.set_font("Arial", "B", 80)
     pdf.set_xy(10, 100)
@@ -40,7 +45,7 @@ def creer_diplome(nom, prenom, score):
     # --- LOGO CNGE ---
     pdf.image(LOGO_PATH, x=75, y=10, w=60)
 
-    # --- Texte du diplôme ---
+    # --- TEXTE DU DIPLOME ---
     pdf.set_font("Arial", "B", 16)
     pdf.ln(60)
     pdf.cell(0, 10, "CNGE FORMATION", ln=True, align="C")
@@ -81,7 +86,6 @@ def creer_diplome(nom, prenom, score):
         align="C"
     )
 
-    # --- Texte supplémentaire dans un encadré ---
     pdf.ln(4)
     pdf.set_font("Arial", "", 10)
     pdf.set_fill_color(230, 230, 230)
@@ -152,8 +156,6 @@ if st.session_state.step == "quiz":
 
     if "reponses_quiz" not in st.session_state:
         st.session_state.reponses_quiz = [None] * len(questions)
-    if "quiz_done" not in st.session_state:
-        st.session_state.quiz_done = False
 
     # Affichage des questions
     for i, (q, options, _) in enumerate(questions):
@@ -165,7 +167,7 @@ if st.session_state.step == "quiz":
         )
 
     # Validation du QCM
-    if st.button("Valider le QCM") and not st.session_state.quiz_done:
+    if st.button("Valider le QCM"):
         score = 0
         corrections = []
 
@@ -179,13 +181,11 @@ if st.session_state.step == "quiz":
 
         resultat = "Réussi" if score >= 7 else "Échoué"
 
-        # Enregistrement dans le CSV (écrase si même nom/prénom)
+        # Enregistrement dans le CSV
         df = pd.read_csv(RESULT_FILE)
-        mask = (df['Nom'] == st.session_state.nom) & (df['Prénom'] == st.session_state.prenom)
+        mask = (df['Nom'] == st.session_state.nom) & (df['Prénom'] == st.session_state.prenom) & (df['Email'] == st.session_state.email)
         if mask.any():
-            df.loc[mask, ['Email', 'Score', 'Résultat']] = [
-                st.session_state.email, f"{score}/10", resultat
-            ]
+            df.loc[mask, ['Score', 'Résultat']] = [f"{score}/10", resultat]
         else:
             df.loc[len(df)] = [
                 st.session_state.nom,
@@ -195,8 +195,6 @@ if st.session_state.step == "quiz":
                 resultat
             ]
         df.to_csv(RESULT_FILE, index=False)
-
-        st.session_state.quiz_done = True
 
         st.markdown("---")
         st.subheader(f"Score : {score}/10 — {resultat}")
@@ -209,17 +207,17 @@ if st.session_state.step == "quiz":
             else:
                 st.error(f"{q} → Ta réponse : {user} | Bonne réponse : {bonne}")
 
-        # Diplôme
+        # Diplôme si réussi
         if resultat == "Réussi":
             pdf_bytes = creer_diplome(st.session_state.nom, st.session_state.prenom, score)
-            st.download_button(
-                "Télécharger le diplôme PDF",
-                pdf_bytes,
-                file_name="diplome_CNGE.pdf"
-            )
+            if pdf_bytes:
+                st.download_button(
+                    "Télécharger le diplôme PDF",
+                    pdf_bytes,
+                    file_name="diplome_CNGE.pdf"
+                )
 
-    # Bouton pour refaire le QCM si non terminé
-    if not st.session_state.quiz_done:
-        if st.button("🔁 Refaire le QCM"):
-            st.session_state.reponses_quiz = [None] * len(questions)
-            st.experimental_rerun()
+    # Bouton pour refaire le QCM
+    if st.button("🔁 Refaire le QCM"):
+        st.session_state.reponses_quiz = [None] * len(questions)
+        st.experimental_rerun()
