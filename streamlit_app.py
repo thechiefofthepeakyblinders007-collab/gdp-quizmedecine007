@@ -5,6 +5,7 @@ from fpdf import FPDF
 from datetime import date
 from io import BytesIO
 import base64
+import requests
 
 # ================= CONFIG =================
 st.set_page_config(page_title="QCM Formation", layout="centered")
@@ -13,8 +14,8 @@ st.title("QCM – Recherche en Soins Premiers")
 RESULT_FILE = "resultats_quiz.csv"
 ADMINS = [("bayen", "marc"), ("steen", "johanna")]
 
-# ================= LOGO EN BASE64 =================
-LOGO_BASE64 = "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"
+# URL de l'image du logo
+LOGO_URL = "https://mistralaichatupprodswe.blob.core.windows.net/chat-images/f4/26/d1/f426d13e-875f-4fd9-899f-49c94b257c5b/38758a3a-e4b5-4132-b44c-65dd45256afa/8c637623-b200-4d1f-b714-899adac55ed7?sv=2025-01-05&st=2025-12-15T17%3A59%3A20Z&se=2025-12-15T18%3A59%3A20Z&sr=b&sp=rade&sig=eqPN%2FR3sxFUbUpif9XBZ8dVMhoVwLdBvVeLXhIQH2Ps%3D"
 
 # ================= CSV =================
 if not os.path.exists(RESULT_FILE):
@@ -25,12 +26,10 @@ def creer_diplome(nom, prenom, score):
     pdf = FPDF()
     pdf.add_page()
 
-    # Décoder la chaîne Base64 en bytes
-    logo_bytes = base64.b64decode(LOGO_BASE64)
-
-    # Sauvegarder les bytes dans un fichier temporaire
+    # Télécharger l'image depuis l'URL
+    response = requests.get(LOGO_URL)
     with open("logo_temp.png", "wb") as f:
-        f.write(logo_bytes)
+        f.write(response.content)
 
     # Ajout du logo en haut du diplôme
     pdf.image("logo_temp.png", x=85, y=10, w=40)
@@ -199,4 +198,3 @@ if st.session_state.step == "quiz":
     if st.button("🔁 Refaire le QCM"):
         st.session_state.reponses_quiz = [None] * len(questions)
         st.experimental_rerun()
-
