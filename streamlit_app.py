@@ -4,7 +4,7 @@ from fpdf import FPDF
 from io import BytesIO
 import os
 
-# ---------------- CONFIG ----------------
+# ================= CONFIG =================
 st.set_page_config(page_title="QCM Médecine", layout="centered")
 st.title("QCM Médecine")
 
@@ -15,13 +15,13 @@ ADMINS = [
     ("steen", "johanna")
 ]
 
-# ---------------- CSV ----------------
+# ================= CSV =================
 if not os.path.exists(RESULT_FILE):
     pd.DataFrame(
         columns=["Nom", "Prénom", "Email", "Score", "Résultat"]
     ).to_csv(RESULT_FILE, index=False)
 
-# ---------------- PDF ----------------
+# ================= PDF =================
 def creer_pdf(nom, prenom, score):
     pdf = FPDF()
     pdf.add_page()
@@ -31,7 +31,8 @@ def creer_pdf(nom, prenom, score):
     pdf.ln(15)
     pdf.set_font("Arial", "", 18)
     pdf.multi_cell(
-        0, 10,
+        0,
+        10,
         f"Ceci certifie que\n\n{prenom} {nom}\n\n"
         f"a réussi le QCM.\n\nScore : {score}/10",
         align="C"
@@ -39,19 +40,19 @@ def creer_pdf(nom, prenom, score):
 
     pdf.ln(20)
     pdf.set_font("Arial", "I", 14)
+    pdf.cell(0, 10, "Date :", ln=True)
     pdf.cell(0, 10, "Signature :", ln=True)
-    pdf.cell(0, 10, "Date :", ln=True, align="R")
 
     buffer = BytesIO()
     buffer.write(pdf.output(dest="S").encode("latin-1"))
     buffer.seek(0)
     return buffer
 
-# ---------------- SESSION ----------------
+# ================= SESSION =================
 if "step" not in st.session_state:
     st.session_state.step = "login"
 
-# ---------------- LOGIN ----------------
+# ================= LOGIN =================
 if st.session_state.step == "login":
     nom = st.text_input("Nom")
     prenom = st.text_input("Prénom")
@@ -62,23 +63,23 @@ if st.session_state.step == "login":
     if not is_admin:
         email = st.text_input("Email")
 
-   if st.button("Continuer"):
-    nom = nom.strip()
-    prenom = prenom.strip()
-    email = email.strip()
+    if st.button("Continuer"):
+        nom = nom.strip()
+        prenom = prenom.strip()
+        email = email.strip()
 
-    if nom == "" or prenom == "":
-        st.warning("Merci de remplir le nom et le prénom")
-    elif not is_admin and email == "":
-        st.warning("Merci de renseigner votre email")
-    else:
-        st.session_state.nom = nom
-        st.session_state.prenom = prenom
-        st.session_state.email = email
-        st.session_state.is_admin = is_admin
-        st.session_state.step = "admin" if is_admin else "quiz"
+        if nom == "" or prenom == "":
+            st.warning("Merci de remplir le nom et le prénom")
+        elif not is_admin and email == "":
+            st.warning("Merci de renseigner votre email")
+        else:
+            st.session_state.nom = nom
+            st.session_state.prenom = prenom
+            st.session_state.email = email
+            st.session_state.is_admin = is_admin
+            st.session_state.step = "admin" if is_admin else "quiz"
 
-# ---------------- ADMIN ----------------
+# ================= ADMIN =================
 if st.session_state.step == "admin":
     st.subheader("📊 Résultats du QCM")
 
@@ -91,7 +92,7 @@ if st.session_state.step == "admin":
         ).to_csv(RESULT_FILE, index=False)
         st.success("Résultats effacés")
 
-# ---------------- QUIZ ----------------
+# ================= QUIZ =================
 if st.session_state.step == "quiz":
     st.subheader(
         f"Bonjour {st.session_state.prenom} {st.session_state.nom}"
@@ -141,7 +142,7 @@ if st.session_state.step == "quiz":
                 score
             )
             st.download_button(
-                "Télécharger le diplôme",
+                "📄 Télécharger le diplôme",
                 pdf,
                 file_name="diplome.pdf"
             )
