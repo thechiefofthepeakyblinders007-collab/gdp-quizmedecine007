@@ -27,7 +27,7 @@ def creer_diplome(nom, prenom, score):
 
     # Sauvegarde temporaire du logo depuis Base64
     with open("logo_temp.png", "wb") as f:
-        f.write(base64.b64decode(LOGO_BASE64.split(",")[-1]))
+        f.write(base64.b64decode(LOGO_BASE64))
 
     # Ajout du logo en haut du diplôme
     pdf.image("logo_temp.png", x=85, y=10, w=40)
@@ -161,17 +161,18 @@ if st.session_state.step == "quiz":
 
         resultat = "Réussi" if score >= 7 else "Échoué"
 
-        # Enregistrement CSV (toujours ajouter une nouvelle ligne)
-        df = pd.read_csv(RESULT_FILE)
-        df.loc[len(df)] = [
-            st.session_state.nom,
-            st.session_state.prenom,
-            st.session_state.email,
-            f"{score}/10",
-            resultat,
-            date.today().strftime("%d/%m/%Y")
-        ]
-        df.to_csv(RESULT_FILE, index=False)
+        # Enregistrement CSV (ajout d'une nouvelle ligne)
+        new_row = {
+            "Nom": st.session_state.nom,
+            "Prénom": st.session_state.prenom,
+            "Email": st.session_state.email,
+            "Score": f"{score}/10",
+            "Résultat": resultat,
+            "Date": date.today().strftime("%d/%m/%Y")
+        }
+
+        new_row_df = pd.DataFrame([new_row])
+        new_row_df.to_csv(RESULT_FILE, mode='a', header=False, index=False)
 
         st.markdown("---")
         st.subheader(f"Score : {score}/10 — {resultat}")
