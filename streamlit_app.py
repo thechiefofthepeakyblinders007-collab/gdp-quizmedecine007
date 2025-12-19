@@ -4,51 +4,39 @@ import pandas as pd
 from fpdf import FPDF
 from datetime import date
 
-# ================= CONFIG =================
+# Configuration de base
 st.set_page_config(page_title="QCM Formation", layout="centered")
-st.title("QCM – Recherche en Soins Premiers")
+st.title("QCM Simplifié - Recherche en Soins Premiers")
 
 RESULT_FILE = "resultats_quiz.csv"
 ADMINS = [("bayen", "marc"), ("steen", "johanna")]
 
-# ================= CSV =================
+# Initialisation du fichier CSV
 if not os.path.exists(RESULT_FILE):
     pd.DataFrame(columns=["Nom", "Prénom", "Email", "Score", "Résultat", "Date"]).to_csv(RESULT_FILE, index=False)
 
-# ================= PDF DIPLOME =================
+# Fonction pour créer le diplôme PDF
 def creer_diplome(nom, prenom, score):
     pdf = FPDF()
     pdf.add_page()
 
-    # Dessiner le logo CNGE FORMATION
+    # Logo simplifié
     pdf.set_fill_color(255, 255, 255)
-    pdf.rect(80, 10, 50, 30, 'DF')  # Fond blanc pour le logo
-
-    # Dessiner le carré et la ligne orange
-    pdf.set_draw_color(245, 166, 35)  # Couleur orange
-    pdf.set_line_width(3)
-    pdf.line(80, 20, 130, 20)  # Ligne horizontale
-    pdf.line(80, 20, 80, 40)   # Ligne verticale gauche
-    pdf.line(130, 20, 130, 40) # Ligne verticale droite
-    pdf.line(80, 40, 130, 40)  # Ligne horizontale basse
-
-    # Dessiner la courbe orange
+    pdf.rect(80, 10, 50, 30, 'DF')
     pdf.set_draw_color(245, 166, 35)
     pdf.set_line_width(2)
-    pdf.curvy_line(130, 20, 140, 10, 150, 20, 160, 30)
-
-    # Texte CNGE en rouge
-    pdf.set_text_color(192, 57, 43)  # Rouge
+    pdf.line(80, 20, 130, 20)
+    pdf.line(80, 20, 80, 40)
+    pdf.line(130, 20, 130, 40)
+    pdf.line(80, 40, 130, 40)
+    pdf.set_text_color(192, 57, 43)
     pdf.set_font("Arial", "B", 14)
     pdf.text(90, 45, "CNGE")
-
-    # Texte FORMATION en orange
-    pdf.set_text_color(245, 166, 35)  # Orange
-    pdf.set_font("Arial", "B", 14)
+    pdf.set_text_color(245, 166, 35)
     pdf.text(85, 55, "FORMATION")
 
-    # Texte du diplôme
-    pdf.set_text_color(0, 0, 0)  # Noir
+    # Contenu du diplôme
+    pdf.set_text_color(0, 0, 0)
     pdf.set_font("Arial", "", 12)
     pdf.ln(50)
     pdf.cell(0, 10, "Hereby Certifies that", ln=True, align="C")
@@ -70,40 +58,14 @@ def creer_diplome(nom, prenom, score):
     pdf.ln(10)
     today = date.today().strftime("%d/%m/%Y")
     pdf.cell(0, 10, f"On {today}", ln=True, align="C")
-    pdf.ln(10)
-    pdf.set_font("Arial", "I", 10)
-    pdf.multi_cell(
-        0, 5,
-        "This e-learning course has been formally recognised for its quality and content by:\n\n"
-        "the following organisations and institutions\n\n"
-        "Collège National des Généralistes Enseignants Formation\n"
-        "https://www.cnge-formation.fr/",
-        align="C"
-    )
-    pdf.ln(5)
-    pdf.set_font("Arial", "", 8)
-    pdf.set_fill_color(230, 230, 230)
-    txt = ("This ICH E6 GCP Investigator Site Training meets the Minimum Criteria for "
-           "ICH GCP Investigator Site Personnel Training identified by TransCelerate BioPharma "
-           "as necessary to enable mutual recognition of GCP training among trial sponsors.")
-    pdf.multi_cell(0, 4, txt, border=1, align="C", fill=True)
-    pdf.ln(5)
-    pdf.set_font("Arial", "I", 8)
-    pdf.cell(0, 5, "Version number 1-2025", ln=True, align="C")
 
     return pdf.output(dest="S").encode("latin-1")
 
-# Ajout de la méthode curvy_line pour dessiner des courbes
-def curvy_line(self, x1, y1, x2, y2, x3, y3):
-    self._out(f"{x1 * self.k:.2f} {y1 * self.k:.2f} m")
-    self._out(f"{x2 * self.k:.2f} {y2 * self.k:.2f} {x3 * self.k:.2f} {y3 * self.k:.2f} c")
-FPDF.curvy_line = curvy_line
-
-# ================= SESSION / LOGIN / QUIZ =================
+# Gestion de la session
 if "step" not in st.session_state:
     st.session_state.step = "login"
 
-# ================= LOGIN =================
+# Page de login
 if st.session_state.step == "login":
     for key in ["nom_input", "prenom_input", "email_input"]:
         if key not in st.session_state:
@@ -130,7 +92,7 @@ if st.session_state.step == "login":
             st.session_state.is_admin = is_admin
             st.session_state.step = "admin" if is_admin else "quiz"
 
-# ================= ADMIN =================
+# Page admin
 if st.session_state.step == "admin":
     st.subheader("Résultats des participants")
     df = pd.read_csv(RESULT_FILE)
@@ -140,84 +102,28 @@ if st.session_state.step == "admin":
         df.iloc[0:0].to_csv(RESULT_FILE, index=False)
         st.success("Liste effacée")
 
-# ================= QUIZ =================
+# Page quiz avec questions Oui/Non
 if st.session_state.step == "quiz":
     st.subheader(f"Bienvenue {st.session_state.prenom} {st.session_state.nom}")
 
     questions = [
-        ("Buts des BPC. Quels sont les buts principaux des Bonnes Pratiques Cliniques (BPC) selon l'ICH E6 (R3) ?",
-         ["La protection des sujets de recherche", "Le conditionnement optimal des médicaments",
-          "La crédibilité des résultats", "La confidentialité des données personnelles",
-          "La communication optimale avec les instances réglementaires"], [0, 2, 3]),
-
-        ("Investigateur Principal. Qu'est-ce qu'un investigateur principal selon l'ICH E6 (R3) ?",
-         ["La personne qui réalise les recherches bibliographiques",
-          "La personne responsable de la conduite de l'essai sur un lieu précis",
-          "La personne en charge du respect des règles éthiques d'un essai",
-          "La personne qui finance un essai"], 1),
-
-        ("Responsabilité du Promoteur. Quelle est la responsabilité du promoteur selon l'ICH E6 (R3) ?",
-         ["La promotion des résultats de l'essai", "La gestion de l'essai",
-          "Le financement de l'essai", "L'initiative d'un essai"], 1),
-
-        ("Principes BPC Avant Début. Avant de débuter un essai clinique, le promoteur doit vérifier que la recherche remplit les principes suivants des BPC (ICH E6 (R3))",
-         ["Les soins sont placés sous la responsabilité d'une personne compétente",
-          "Le consentement libre et éclairé est recueilli",
-          "Le médicament est efficace",
-          "La confidentialité des informations les concernant est protégée"], [0, 1, 3]),
-
-        ("Principes BPC pour les Sujets. Quels principes des BPC s'appliquent aux sujets de recherche selon l'ICH E6 (R3) ?",
-         ["Les soins sont placés sous la responsabilité d'une personne compétente",
-          "Le consentement libre et éclairé est recueilli",
-          "Le médicament est efficace",
-          "La confidentialité des informations les concernant est protégée"], [0, 1, 3]),
-
-        ("Validation des Compétences. Comment valide-t-on la compétence d'un professionnel impliqué dans un essai clinique selon l'ICH E6 (R3)?",
-         ["Par l'obtention d'un diplôme",
-          "Par la validation d'un module de formation aux BPC",
-          "Par le suivi d'une formation continue",
-          "Par l'exercice de son activité professionnelle",
-          "Par la participation régulière à des groupes de pairs"], [1, 2, 4]),
-
-        ("Inclusion Sans Consentement. Peut-on inclure un sujet dont il est impossible de recueillir le consentement éclairé ?",
-         ["Non", "Oui, en disposant de l'attestation d'un tiers indépendant",
-          "Oui, en disposant de l'avis express du comité d'éthique"], 2),
-
-        ("Protocole de Recherche. Concernant le protocole de recherche, quels principes ci-dessous doit-il respecter selon l'ICH E6 (R3)?",
-         ["Il n'est pas indispensable dans le cadre des BPC",
-          "Il décrit le rationnel scientifique de façon claire et détaillée",
-          "Il doit avoir reçu l'avis favorable d'un comité d'éthique",
-          "Il doit avoir reçu l'avis favorable de l'autorité réglementaire (ex. ANSM)",
-          "Il décrit l'usage des médicaments étudiés"], [1, 2, 3, 4]),
-
-        ("Suivi de la Recherche. Concernant le suivi de la recherche, quel(s) principe(s) ci-dessous doit-il respecter selon l'ICH E6 (R3)?",
-         ["Seules les données concernant les médicaments sont à consigner",
-          "Toutes les données sont à consigner",
-          "Des procédures doivent être mises en place pour assurer la qualité de chaque aspect"], [1, 2]),
-
-        ("Principes ALCOA+. Quels sont les principes ALCOA+ applicables aux données sources selon l'ICH E6 (R3)?",
-         ["Attribuable", "Lisible", "Contemporain", "Original", "Exact",
-          "Complet", "Consistant", "Durable"], [0, 1, 2, 3, 4, 5, 6, 7])
+        ("Les Bonnes Pratiques Cliniques visent-elles à protéger les sujets de recherche ?", ["Oui", "Non"], 0),
+        ("L'investigateur principal est-il responsable de la conduite de l'essai sur un lieu précis ?", ["Oui", "Non"], 0),
+        ("Le promoteur est-il responsable de la gestion de l'essai ?", ["Oui", "Non"], 0),
+        ("Le protocole de recherche doit-il décrire le rationnel scientifique ?", ["Oui", "Non"], 0),
+        ("Les données sources doivent-elles être attribuables ?", ["Oui", "Non"], 0)
     ]
 
     if "reponses_quiz" not in st.session_state:
         st.session_state.reponses_quiz = [None] * len(questions)
 
     for i, (q, options, bonne) in enumerate(questions):
-        if isinstance(bonne, list):
-            st.session_state.reponses_quiz[i] = st.multiselect(
-                q,
-                options=options,
-                default=[] if st.session_state.reponses_quiz[i] is None else st.session_state.reponses_quiz[i],
-                key=f"q{i}"
-            )
-        else:
-            st.session_state.reponses_quiz[i] = st.radio(
-                q,
-                options=options,
-                index=None if st.session_state.reponses_quiz[i] is None else options.index(st.session_state.reponses_quiz[i]),
-                key=f"q{i}"
-            )
+        st.session_state.reponses_quiz[i] = st.radio(
+            q,
+            options=options,
+            index=None if st.session_state.reponses_quiz[i] is None else options.index(st.session_state.reponses_quiz[i]),
+            key=f"q{i}"
+        )
 
     if st.button("Valider le QCM"):
         score = 0
@@ -225,21 +131,14 @@ if st.session_state.step == "quiz":
 
         for i, (q, options, bonne) in enumerate(questions):
             user_rep = st.session_state.reponses_quiz[i]
-            if isinstance(bonne, list):
-                if set(user_rep) == set([options[j] for j in bonne]):
-                    score += 1
-                    corrections.append((q, user_rep, [options[j] for j in bonne], True))
-                else:
-                    corrections.append((q, user_rep, [options[j] for j in bonne], False))
-            else:
-                bonne_rep = options[bonne]
-                if user_rep == bonne_rep:
-                    score += 1
-                corrections.append((q, user_rep, bonne_rep, user_rep == bonne_rep))
+            bonne_rep = options[bonne]
+            if user_rep == bonne_rep:
+                score += 1
+            corrections.append((q, user_rep, bonne_rep, user_rep == bonne_rep))
 
-        resultat = "Réussi" if score >= 7 else "Échoué"
+        resultat = "Réussi" if score >= 3 else "Échoué"  # 3 bonnes réponses sur 5 pour réussir
 
-        # Enregistrement CSV (ajout d'une nouvelle ligne)
+        # Enregistrement CSV
         new_row = {
             "Nom": st.session_state.nom,
             "Prénom": st.session_state.prenom,
