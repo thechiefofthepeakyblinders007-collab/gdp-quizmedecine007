@@ -15,46 +15,46 @@ ADMINS = [("bayen", "marc"), ("steen", "johanna")]
 if not os.path.exists(RESULT_FILE):
     pd.DataFrame(columns=["Nom", "Prénom", "Email", "Score", "Résultat", "Date"]).to_csv(RESULT_FILE, index=False)
 
-# Classe personnalisée pour le PDF
 class PDF(FPDF):
-    def draw_logo(self):
+    def header(self):
+        # Logo CNGE FORMATION
+        self.set_font('Arial', 'B', 12)
+
         # Dessiner le carré gris
         self.set_draw_color(150, 150, 150)  # Gris
         self.set_line_width(1)
-        self.rect(20, 20, 30, 30)  # Carré gris
+        self.rect(20, 15, 25, 25)  # Carré gris
 
         # Dessiner la ligne orange
         self.set_draw_color(245, 166, 35)  # Orange
-        self.set_line_width(4)
-        self.line(50, 35, 90, 15)  # Ligne orange diagonale
+        self.set_line_width(3)
+        self.line(45, 25, 75, 5)  # Ligne orange diagonale
 
         # Texte CNGE en rouge
         self.set_text_color(192, 57, 43)  # Rouge
         self.set_font("Arial", "B", 16)
-        self.text(25, 55, "CNGE")
+        self.text(25, 45, "CNGE")
 
-    def footer(self):
-        # Positionnement à 1,5 cm du bas
-        self.set_y(-15)
-        # Police Arial italique 8
-        self.set_font('Arial', 'I', 8)
-        # Numéro de page
-        self.cell(0, 10, 'Version number 1-2025', 0, 0, 'C')
+        # Fond orange pour FORMATION
+        self.set_fill_color(245, 166, 35)  # Orange
+        self.rect(15, 50, 40, 8, 'F')  # Fond orange
+
+        # Texte FORMATION en blanc
+        self.set_text_color(255, 255, 255)  # Blanc
+        self.set_font("Arial", "B", 12)
+        self.text(30, 55, "FORMATION")
 
 def creer_diplome(nom, prenom, score):
     pdf = PDF()
     pdf.add_page()
 
-    # Dessiner le logo
-    pdf.draw_logo()
-
     # Titre principal
     pdf.set_text_color(0, 0, 0)  # Noir
     pdf.set_font("Arial", "", 12)
-    pdf.ln(40)
+    pdf.ln(60)
     pdf.cell(0, 10, "Hereby Certifies that", ln=True, align="C")
 
-    # Nom du participant en gras et plus grand
+    # Nom du participant
     pdf.ln(10)
     pdf.set_font("Arial", "B", 18)
     pdf.cell(0, 10, f"{prenom} {nom}", ln=True, align="C")
@@ -96,14 +96,20 @@ def creer_diplome(nom, prenom, score):
     pdf.cell(0, 10, "Collège National des Généralistes Enseignants Formation", ln=True, align="C")
     pdf.cell(0, 10, "https://www.cnge-formation.fr/", ln=True, align="C")
 
-    # Texte TransCelerate avec bordure noire
+    # Texte TransCelerate avec bordure noire fine
     pdf.ln(5)
     pdf.set_font("Arial", "", 8)
     pdf.set_draw_color(0, 0, 0)  # Noir pour la bordure
+    pdf.set_line_width(0.2)  # Trait fin
     txt = ("This ICH E6 GCP Investigator Site Training meets the Minimum Criteria for "
            "ICH GCP Investigator Site Personnel Training identified by TransCelerate BioPharma "
            "as necessary to enable mutual recognition of GCP training among trial sponsors.")
     pdf.multi_cell(0, 4, txt, border=1, align="C")
+
+    # Version
+    pdf.ln(5)
+    pdf.set_font("Arial", "I", 8)
+    pdf.cell(0, 5, "Version number 1-2025", ln=True, align="C")
 
     return pdf.output(dest="S").encode("latin-1")
 
@@ -219,4 +225,5 @@ if st.session_state.step == "quiz":
     if st.button("🔁 Refaire le QCM"):
         st.session_state.reponses_quiz = [None] * len(questions)
         st.rerun()
+
 
