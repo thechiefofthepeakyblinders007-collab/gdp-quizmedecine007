@@ -69,7 +69,8 @@ def creer_diplome(nom, prenom, score):
         align="C"
     )
 
-    return pdf.output(dest="S").encode("latin-1")
+    return bytes(pdf.output(dest="S"))
+
 
 # ================= SESSION =================
 if "step" not in st.session_state:
