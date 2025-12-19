@@ -4,7 +4,6 @@ import pandas as pd
 from datetime import date
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
-from reportlab.lib.utils import ImageReader
 from io import BytesIO
 
 # Configuration de base
@@ -19,30 +18,33 @@ if not os.path.exists(RESULT_FILE):
     pd.DataFrame(columns=["Nom", "Prénom", "Email", "Score", "Résultat", "Date"]).to_csv(RESULT_FILE, index=False)
 
 def creer_pdf(nom_complet, score, date_str):
-    """Crée un PDF avec le diplôme complet et le logo"""
+    """Crée un PDF avec le diplôme complet et le logo dessiné directement"""
     packet = BytesIO()
     can = canvas.Canvas(packet, pagesize=letter)
 
-    # Ajouter le logo (si le fichier existe)
-    try:
-        logo_path = "logo_cnge.png"
-        if os.path.exists(logo_path):
-            can.drawImage(logo_path, 20, 700, width=100, height=50, preserveAspectRatio=True)
-    except:
-        # Si le logo n'est pas trouvé, dessiner un logo de base
-        can.setFillColorRGB(0.8, 0.8, 0.8)
-        can.rect(20, 700, 30, 30, fill=1)
-        can.setStrokeColorRGB(245/255, 166/255, 35/255)
-        can.setLineWidth(3)
-        can.line(50, 715, 90, 695)
-        can.setFillColorRGB(192/255, 57/255, 43/255)
-        can.setFont("Helvetica-Bold", 16)
-        can.drawString(25, 660, "CNGE")
-        can.setFillColorRGB(245/255, 166/255, 35/255)
-        can.rect(15, 640, 40, 10, fill=1)
-        can.setFillColorRGB(1, 1, 1)
-        can.setFont("Helvetica-Bold", 10)
-        can.drawString(20, 642, "FORMATION")
+    # Dessiner le logo CNGE FORMATION
+    # Carré gris
+    can.setFillColorRGB(0.8, 0.8, 0.8)
+    can.rect(20, 700, 30, 30, fill=1)
+
+    # Ligne orange diagonale
+    can.setStrokeColorRGB(245/255, 166/255, 35/255)
+    can.setLineWidth(3)
+    can.line(50, 715, 90, 695)
+
+    # Texte CNGE en rouge
+    can.setFillColorRGB(192/255, 57/255, 43/255)
+    can.setFont("Helvetica-Bold", 16)
+    can.drawString(25, 660, "CNGE")
+
+    # Fond orange pour FORMATION
+    can.setFillColorRGB(245/255, 166/255, 35/255)
+    can.rect(15, 640, 40, 10, fill=1)
+
+    # Texte FORMATION en blanc
+    can.setFillColorRGB(1, 1, 1)
+    can.setFont("Helvetica-Bold", 10)
+    can.drawString(20, 642, "FORMATION")
 
     # Texte du diplôme
     can.setFillColorRGB(0, 0, 0)
@@ -216,3 +218,4 @@ if st.session_state.step == "quiz":
     if st.button("🔁 Refaire le QCM"):
         st.session_state.reponses_quiz = [None] * len(questions)
         st.rerun()
+
