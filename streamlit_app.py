@@ -16,7 +16,6 @@ if not os.path.exists(RESULT_FILE):
         columns=["Nom", "Prénom", "Email", "Score", "Résultat"]
     ).to_csv(RESULT_FILE, index=False)
 
-# ================= PDF DIPLOME =================
 def creer_diplome(nom, prenom, score):
     pdf = FPDF()
     pdf.add_page()
@@ -44,7 +43,7 @@ def creer_diplome(nom, prenom, score):
     )
 
     pdf.ln(6)
-    pdf.cell(0, 8, f"with a score of {score * 10} %", ln=True, align="C")
+    pdf.cell(0, 8, f"with a score of {int(score * 100)} %", ln=True, align="C")
 
     pdf.ln(6)
     today = date.today().strftime("%d/%m/%Y")
@@ -69,7 +68,9 @@ def creer_diplome(nom, prenom, score):
         align="C"
     )
 
-    return bytes(pdf.output(dest="S"))
+    # ✅ LIGNE CORRECTE
+    return pdf.output(dest="S")
+
 
 
 # ================= SESSION =================
