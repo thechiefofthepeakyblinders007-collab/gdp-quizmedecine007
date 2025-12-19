@@ -3,6 +3,7 @@ import streamlit as st
 import pandas as pd
 from fpdf import FPDF
 from datetime import date
+import base64
 
 # Configuration de base
 st.set_page_config(page_title="QCM Formation", layout="centered")
@@ -18,25 +19,29 @@ if not os.path.exists(RESULT_FILE):
 # Classe personnalisée pour le PDF
 class PDF(FPDF):
     def draw_logo(self):
-        # Dessiner le carré orange
-        self.set_draw_color(245, 166, 35)  # Couleur orange
-        self.set_line_width(2)
-        self.rect(80, 15, 25, 20)  # Carré
+        # Dessiner le carré gris
+        self.set_draw_color(150, 150, 150)  # Gris
+        self.set_line_width(1)
+        self.rect(80, 15, 25, 25)  # Carré
 
         # Dessiner la courbe orange
-        self.set_draw_color(245, 166, 35)
-        self.set_line_width(2)
-        self.line(105, 20, 130, 15)  # Courbe simplifiée
+        self.set_draw_color(245, 166, 35)  # Orange
+        self.set_line_width(3)
+        self.line(105, 15, 130, 5)  # Courbe simplifiée
 
         # Texte CNGE en rouge
         self.set_text_color(192, 57, 43)  # Rouge
-        self.set_font("Arial", "B", 14)
-        self.text(85, 40, "CNGE")
+        self.set_font("Arial", "B", 16)
+        self.text(85, 45, "CNGE")
 
-        # Texte FORMATION en orange
-        self.set_text_color(245, 166, 35)  # Orange
+        # Fond orange pour FORMATION
+        self.set_fill_color(245, 166, 35)  # Orange
+        self.rect(75, 50, 50, 8, 'F')  # Fond orange
+
+        # Texte FORMATION en blanc
+        self.set_text_color(255, 255, 255)  # Blanc
         self.set_font("Arial", "B", 12)
-        self.text(82, 50, "FORMATION")
+        self.text(97, 55, "FORMATION")
 
 def creer_diplome(nom, prenom, score):
     pdf = PDF()
@@ -45,7 +50,7 @@ def creer_diplome(nom, prenom, score):
     # Dessiner le logo
     pdf.draw_logo()
 
-    # Titre principal
+    # Texte du diplôme
     pdf.set_text_color(0, 0, 0)  # Noir
     pdf.set_font("Arial", "", 12)
     pdf.ln(60)
@@ -184,7 +189,7 @@ if st.session_state.step == "quiz":
                 score += 1
             corrections.append((q, user_rep, bonne_rep, user_rep == bonne_rep))
 
-        resultat = "Réussi" if score >= 3 else "Échoué"  # 3 bonnes réponses sur 5 pour réussir
+        resultat = "Réussi" if score >= 3 else "Échoué"
 
         # Enregistrement CSV
         new_row = {
@@ -220,9 +225,4 @@ if st.session_state.step == "quiz":
 
     if st.button("🔁 Refaire le QCM"):
         st.session_state.reponses_quiz = [None] * len(questions)
-        st.experimental_rerun()
-
-
-    if st.button("🔁 Refaire le QCM"):
-        st.session_state.reponses_quiz = [None] * len(questions)
-        st.experimental_rerun()
+        st.rerun()
