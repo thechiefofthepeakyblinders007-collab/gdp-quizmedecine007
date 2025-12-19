@@ -6,7 +6,7 @@ from datetime import date
 
 # Configuration de base
 st.set_page_config(page_title="QCM Formation", layout="centered")
-st.title("QCM Simplifié - Recherche en Soins Premiers")
+st.title("QCM - Recherche en Soins Premiers")
 
 RESULT_FILE = "resultats_quiz.csv"
 ADMINS = [("bayen", "marc"), ("steen", "johanna")]
@@ -17,43 +17,38 @@ if not os.path.exists(RESULT_FILE):
 
 # Classe personnalisée pour le PDF
 class PDF(FPDF):
-    def header(self):
-        # Logo CNGE FORMATION
-        self.set_fill_color(255, 255, 255)
-        self.rect(80, 10, 50, 30, 'DF')  # Fond blanc
+    def draw_logo(self):
+        # Dessiner le carré orange
+        self.set_draw_color(245, 166, 35)  # Couleur orange
+        self.set_line_width(2)
+        self.rect(80, 15, 25, 20)  # Carré
 
-        # Carré orange
+        # Dessiner la courbe orange
         self.set_draw_color(245, 166, 35)
         self.set_line_width(2)
-        self.line(80, 20, 130, 20)  # Ligne horizontale haute
-        self.line(80, 20, 80, 40)   # Ligne verticale gauche
-        self.line(130, 20, 130, 40) # Ligne verticale droite
-        self.line(80, 40, 130, 40)  # Ligne horizontale basse
-
-        # Courbe orange
-        self.set_draw_color(245, 166, 35)
-        self.curved_line(130, 20, 140, 10, 150, 20)
+        self.line(105, 20, 130, 15)  # Courbe simplifiée
 
         # Texte CNGE en rouge
-        self.set_text_color(192, 57, 43)
+        self.set_text_color(192, 57, 43)  # Rouge
         self.set_font("Arial", "B", 14)
-        self.text(90, 45, "CNGE")
+        self.text(85, 40, "CNGE")
 
         # Texte FORMATION en orange
-        self.set_text_color(245, 166, 35)
-        self.set_font("Arial", "B", 14)
-        self.text(85, 55, "FORMATION")
-
-    def curved_line(self, x1, y1, x2, y2, x3, y3):
-        self._out(f"{x1:.2f} {y1:.2f} m {x2:.2f} {y2:.2f} {x3:.2f} {y3:.2f} c S")
+        self.set_text_color(245, 166, 35)  # Orange
+        self.set_font("Arial", "B", 12)
+        self.text(82, 50, "FORMATION")
 
 def creer_diplome(nom, prenom, score):
     pdf = PDF()
     pdf.add_page()
 
+    # Dessiner le logo
+    pdf.draw_logo()
+
     # Titre principal
-    pdf.ln(50)
+    pdf.set_text_color(0, 0, 0)  # Noir
     pdf.set_font("Arial", "", 12)
+    pdf.ln(60)
     pdf.cell(0, 10, "Hereby Certifies that", ln=True, align="C")
 
     # Nom du participant
@@ -88,13 +83,17 @@ def creer_diplome(nom, prenom, score):
     pdf.multi_cell(
         0, 5,
         "This e-learning course has been formally recognised for its quality and content by:\n\n"
-        "the following organisations and institutions\n\n"
-        "Collège National des Généralistes Enseignants Formation\n"
-        "https://www.cnge-formation.fr/",
+        "the following organisations and institutions",
         align="C"
     )
 
-    # Texte TransCelerate
+    # Texte Collège National
+    pdf.ln(5)
+    pdf.set_font("Arial", "", 10)
+    pdf.cell(0, 10, "Collège National des Généralistes Enseignants Formation", ln=True, align="C")
+    pdf.cell(0, 10, "https://www.cnge-formation.fr/", ln=True, align="C")
+
+    # Texte TransCelerate avec fond gris
     pdf.ln(5)
     pdf.set_font("Arial", "", 8)
     pdf.set_fill_color(230, 230, 230)
@@ -218,6 +217,11 @@ if st.session_state.step == "quiz":
                 file_name="diplome_CNGE.pdf",
                 mime="application/pdf"
             )
+
+    if st.button("🔁 Refaire le QCM"):
+        st.session_state.reponses_quiz = [None] * len(questions)
+        st.experimental_rerun()
+
 
     if st.button("🔁 Refaire le QCM"):
         st.session_state.reponses_quiz = [None] * len(questions)
