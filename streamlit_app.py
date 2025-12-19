@@ -2,6 +2,7 @@ import os
 import streamlit as st
 import pandas as pd
 from datetime import date
+from PyPDF2 import PdfReader, PdfWriter
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from io import BytesIO
@@ -17,90 +18,53 @@ ADMINS = [("bayen", "marc"), ("steen", "johanna")]
 if not os.path.exists(RESULT_FILE):
     pd.DataFrame(columns=["Nom", "Prénom", "Email", "Score", "Résultat", "Date"]).to_csv(RESULT_FILE, index=False)
 
-def creer_pdf(nom_complet, score, date_str):
-    """Crée un PDF avec le diplôme complet et le logo dessiné directement"""
-    packet = BytesIO()
-    can = canvas.Canvas(packet, pagesize=letter)
+def remplir_pdf(nom_complet, score, date_str):
+    # Charger le PDF modèle
+    template_path = "CNGE FORMATION_attestation BPC_V1_2025.docx.pdf"
 
-    # Dessiner le logo CNGE FORMATION
-    # Carré gris
-    can.setFillColorRGB(0.8, 0.8, 0.8)
-    can.rect(20, 700, 30, 30, fill=1)
+    try:
+        # Créer un buffer pour le nouveau contenu
+        packet = BytesIO()
+        can = canvas.Canvas(packet, pagesize=letter)
 
-    # Ligne orange diagonale
-    can.setStrokeColorRGB(245/255, 166/255, 35/255)
-    can.setLineWidth(3)
-    can.line(50, 715, 90, 695)
+        # Définir la police et la taille
+        can.setFont("Helvetica", 12)
 
-    # Texte CNGE en rouge
-    can.setFillColorRGB(192/255, 57/255, 43/255)
-    can.setFont("Helvetica-Bold", 16)
-    can.drawString(25, 660, "CNGE")
+        # Écrire les informations variables aux positions exactes
+        # Position pour le nom (à ajuster selon ton modèle)
+        can.drawString(90, 630, nom_complet)  # Position Y à ajuster
 
-    # Fond orange pour FORMATION
-    can.setFillColorRGB(245/255, 166/255, 35/255)
-    can.rect(15, 640, 40, 10, fill=1)
+        # Position pour le score (à ajuster selon ton modèle)
+        can.drawString(90, 480, f"{int(score*100)}%")  # Position Y à ajuster
 
-    # Texte FORMATION en blanc
-    can.setFillColorRGB(1, 1, 1)
-    can.setFont("Helvetica-Bold", 10)
-    can.drawString(20, 642, "FORMATION")
+        # Position pour la date (à ajuster selon ton modèle)
+        can.drawString(50, 440, date_str)  # Position Y à ajuster
 
-    # Texte du diplôme
-    can.setFillColorRGB(0, 0, 0)
-    can.setFont("Helvetica", 12)
+        can.save()
 
-    # Hereby Certifies that
-    can.drawString(100, 600, "Hereby Certifies that")
+        # Déplacer au début du buffer
+        packet.seek(0)
+        new_pdf = PdfReader(packet)
 
-    # Nom du participant
-    can.setFont("Helvetica-Bold", 16)
-    can.drawString(100, 570, nom_complet)
+        # Lire le PDF modèle
+        existing_pdf = PdfReader(open(template_path, "rb"))
+        output = PdfWriter()
 
-    # Texte du cours
-    can.setFont("Helvetica", 12)
-    can.drawString(100, 540, "has completed the e-learning course")
+        # Fusionner les pages
+        page = existing_pdf.pages[0]
+        page.merge_page(new_pdf.pages[0])
+        output.add_page(page)
 
-    can.setFont("Helvetica-Bold", 14)
-    can.drawString(100, 510, "RECHERCHE EN SOINS PREMIERS")
+        # Sauvegarder dans un buffer
+        output_stream = BytesIO()
+        output.write(output_stream)
+        output_stream.seek(0)
 
-    can.setFont("Helvetica", 12)
-    can.drawString(100, 490, "Formation aux bonnes pratiques cliniques")
-    can.drawString(100, 470, "(ICH E6 (R3))")
+        return output_stream.getvalue()
 
-    # Score
-    can.drawString(100, 440, f"with a score of {int(score*100)}%")
-
-    # Date
-    can.drawString(100, 420, f"On {date_str}")
-
-    # Texte de reconnaissance
-    can.setFont("Helvetica-Oblique", 10)
-    can.drawString(100, 380, "This e-learning course has been formally recognised for its quality and content by:")
-    can.drawString(100, 360, "the following organisations and institutions")
-    can.drawString(100, 340, "Collège National des Généralistes Enseignants Formation")
-    can.drawString(100, 320, "https://www.cnge-formation.fr/")
-
-    # Encadré TransCelerate avec bordure fine
-    can.setFont("Helvetica", 8)
-    can.setLineWidth(0.2)
-    can.rect(50, 280, 120, 30, stroke=1, fill=0)
-
-    # Texte dans l'encadré
-    text = can.beginText(55, 290)
-    text.setFont("Helvetica", 8)
-    text.textLine("This ICH E6 GCP Investigator Site Training meets the Minimum Criteria for")
-    text.textLine("ICH GCP Investigator Site Personnel Training identified by TransCelerate BioPharma")
-    text.textLine("as necessary to enable mutual recognition of GCP training among trial sponsors.")
-    can.drawText(text)
-
-    # Version
-    can.setFont("Helvetica-Oblique", 8)
-    can.drawString(100, 250, "Version number 1-2025")
-
-    can.save()
-    packet.seek(0)
-    return packet.getvalue()
+    except Exception as e:
+        st.error(f"Erreur lors de la génération du PDF: {str(e)}")
+        return None
 
 # Gestion de la session
 if "step" not in st.session_state:
@@ -205,7 +169,7 @@ if st.session_state.step == "quiz":
         # Générer le PDF
         nom_complet = f"{st.session_state.prenom} {st.session_state.nom}"
         date_str = date.today().strftime("%d/%m/%Y")
-        pdf_bytes = creer_pdf(nom_complet, score/len(questions), date_str)
+        pdf_bytes = remplir_pdf(nom_complet, score/len(questions), date_str)
 
         if pdf_bytes:
             st.download_button(
@@ -218,4 +182,6 @@ if st.session_state.step == "quiz":
     if st.button("🔁 Refaire le QCM"):
         st.session_state.reponses_quiz = [None] * len(questions)
         st.rerun()
+
+
 
