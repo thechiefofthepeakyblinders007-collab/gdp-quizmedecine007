@@ -1,8 +1,11 @@
 import os
 import streamlit as st
 import pandas as pd
-from fpdf import FPDF
 from datetime import date
+from PyPDF2 import PdfReader, PdfWriter
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+from io import BytesIO
 
 # Configuration de base
 st.set_page_config(page_title="QCM Formation", layout="centered")
@@ -15,103 +18,54 @@ ADMINS = [("bayen", "marc"), ("steen", "johanna")]
 if not os.path.exists(RESULT_FILE):
     pd.DataFrame(columns=["Nom", "Prénom", "Email", "Score", "Résultat", "Date"]).to_csv(RESULT_FILE, index=False)
 
-class PDF(FPDF):
-    def header(self):
-        # Logo CNGE FORMATION
-        self.set_font('Arial', 'B', 12)
+def remplir_pdf(nom_complet, score, date_str):
+    # Charger le PDF modèle
+    template_path = "CNGE FORMATION_attestation BPC_V1_2025.docx.pdf"
 
-        # Dessiner le carré gris
-        self.set_draw_color(150, 150, 150)  # Gris
-        self.set_line_width(1)
-        self.rect(20, 15, 25, 25)  # Carré gris
+    try:
+        # Créer un buffer pour le nouveau contenu
+        packet = BytesIO()
+        can = canvas.Canvas(packet, pagesize=letter)
 
-        # Dessiner la ligne orange
-        self.set_draw_color(245, 166, 35)  # Orange
-        self.set_line_width(3)
-        self.line(45, 25, 75, 5)  # Ligne orange diagonale
+        # Définir la police
+        can.setFont("Helvetica-Bold", 14)  # Police en gras pour le nom
 
-        # Texte CNGE en rouge
-        self.set_text_color(192, 57, 43)  # Rouge
-        self.set_font("Arial", "B", 16)
-        self.text(25, 45, "CNGE")
+        # Positions pré-remplies pour ton modèle
+        # Nom (environ au centre en haut)
+        can.drawString(90, 630, nom_complet)
 
-        # Fond orange pour FORMATION
-        self.set_fill_color(245, 166, 35)  # Orange
-        self.rect(15, 50, 40, 8, 'F')  # Fond orange
+        # Score (à gauche de "with a score of")
+        can.setFont("Helvetica", 12)
+        can.drawString(130, 480, f"{int(score*100)}%")
 
-        # Texte FORMATION en blanc
-        self.set_text_color(255, 255, 255)  # Blanc
-        self.set_font("Arial", "B", 12)
-        self.text(30, 55, "FORMATION")
+        # Date (à droite de "On")
+        can.drawString(60, 440, date_str)
 
-def creer_diplome(nom, prenom, score):
-    pdf = PDF()
-    pdf.add_page()
+        can.save()
 
-    # Titre principal
-    pdf.set_text_color(0, 0, 0)  # Noir
-    pdf.set_font("Arial", "", 12)
-    pdf.ln(60)
-    pdf.cell(0, 10, "Hereby Certifies that", ln=True, align="C")
+        # Déplacer au début du buffer
+        packet.seek(0)
+        new_pdf = PdfReader(packet)
 
-    # Nom du participant
-    pdf.ln(10)
-    pdf.set_font("Arial", "B", 18)
-    pdf.cell(0, 10, f"{prenom} {nom}", ln=True, align="C")
+        # Lire le PDF modèle
+        existing_pdf = PdfReader(open(template_path, "rb"))
+        output = PdfWriter()
 
-    # Texte du cours
-    pdf.ln(10)
-    pdf.set_font("Arial", "B", 14)
-    pdf.cell(0, 10, "has completed the e-learning course", ln=True, align="C")
-    pdf.ln(10)
-    pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 10, "RECHERCHE EN SOINS PREMIERS", ln=True, align="C")
-    pdf.set_font("Arial", "", 14)
-    pdf.cell(0, 10, "Formation aux bonnes pratiques cliniques", ln=True, align="C")
-    pdf.cell(0, 10, "(ICH E6 (R3))", ln=True, align="C")
+        # Fusionner les pages
+        page = existing_pdf.pages[0]
+        page.merge_page(new_pdf.pages[0])
+        output.add_page(page)
 
-    # Score
-    pdf.ln(10)
-    pdf.set_font("Arial", "", 12)
-    pdf.cell(0, 10, f"with a score of {int(score*100)}%", ln=True, align="C")
+        # Sauvegarder dans un buffer
+        output_stream = BytesIO()
+        output.write(output_stream)
+        output_stream.seek(0)
 
-    # Date
-    pdf.ln(10)
-    today = date.today().strftime("%d/%m/%Y")
-    pdf.cell(0, 10, f"On {today}", ln=True, align="C")
+        return output_stream.getvalue()
 
-    # Texte de reconnaissance
-    pdf.ln(10)
-    pdf.set_font("Arial", "I", 10)
-    pdf.multi_cell(
-        0, 5,
-        "This e-learning course has been formally recognised for its quality and content by:\n\n"
-        "the following organisations and institutions",
-        align="C"
-    )
-
-    # Texte Collège National
-    pdf.ln(5)
-    pdf.set_font("Arial", "", 10)
-    pdf.cell(0, 10, "Collège National des Généralistes Enseignants Formation", ln=True, align="C")
-    pdf.cell(0, 10, "https://www.cnge-formation.fr/", ln=True, align="C")
-
-    # Texte TransCelerate avec bordure noire fine
-    pdf.ln(5)
-    pdf.set_font("Arial", "", 8)
-    pdf.set_draw_color(0, 0, 0)  # Noir pour la bordure
-    pdf.set_line_width(0.2)  # Trait fin
-    txt = ("This ICH E6 GCP Investigator Site Training meets the Minimum Criteria for "
-           "ICH GCP Investigator Site Personnel Training identified by TransCelerate BioPharma "
-           "as necessary to enable mutual recognition of GCP training among trial sponsors.")
-    pdf.multi_cell(0, 4, txt, border=1, align="C")
-
-    # Version
-    pdf.ln(5)
-    pdf.set_font("Arial", "I", 8)
-    pdf.cell(0, 5, "Version number 1-2025", ln=True, align="C")
-
-    return pdf.output(dest="S").encode("latin-1")
+    except Exception as e:
+        st.error(f"Erreur lors de la génération du PDF: {str(e)}. Vérifie que le fichier 'CNGE FORMATION_attestation BPC_V1_2025.docx.pdf' est présent dans le même dossier.")
+        return None
 
 # Gestion de la session
 if "step" not in st.session_state:
@@ -213,12 +167,16 @@ if st.session_state.step == "quiz":
             else:
                 st.error(f"{q} → Ta réponse : {user} | Bonne réponse : {bonne}")
 
-        pdf_bytes = creer_diplome(st.session_state.nom, st.session_state.prenom, score/len(questions))
+        # Générer le PDF
+        nom_complet = f"{st.session_state.prenom} {st.session_state.nom}"
+        date_str = date.today().strftime("%d/%m/%Y")
+        pdf_bytes = remplir_pdf(nom_complet, score/len(questions), date_str)
+
         if pdf_bytes:
             st.download_button(
                 "Télécharger le diplôme PDF",
                 pdf_bytes,
-                file_name="diplome_CNGE.pdf",
+                file_name=f"diplome_{st.session_state.nom}_{st.session_state.prenom}.pdf",
                 mime="application/pdf"
             )
 
