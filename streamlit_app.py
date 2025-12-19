@@ -1,8 +1,11 @@
 import os
 import streamlit as st
 import pandas as pd
-from fpdf import FPDF
 from datetime import date
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.utils import ImageReader
+from io import BytesIO
 
 # Configuration de base
 st.set_page_config(page_title="QCM Formation", layout="centered")
@@ -15,103 +18,87 @@ ADMINS = [("bayen", "marc"), ("steen", "johanna")]
 if not os.path.exists(RESULT_FILE):
     pd.DataFrame(columns=["Nom", "Prénom", "Email", "Score", "Résultat", "Date"]).to_csv(RESULT_FILE, index=False)
 
-class PDF(FPDF):
-    def header(self):
-        # Logo CNGE FORMATION
-        self.set_font('Arial', 'B', 12)
+def creer_pdf(nom_complet, score, date_str):
+    """Crée un PDF avec le diplôme complet et le logo"""
+    packet = BytesIO()
+    can = canvas.Canvas(packet, pagesize=letter)
 
-        # Dessiner le carré gris
-        self.set_draw_color(150, 150, 150)  # Gris
-        self.set_line_width(1)
-        self.rect(20, 15, 25, 25)  # Carré gris
+    # Ajouter le logo (si le fichier existe)
+    try:
+        logo_path = "logo_cnge.png"
+        if os.path.exists(logo_path):
+            can.drawImage(logo_path, 20, 700, width=100, height=50, preserveAspectRatio=True)
+    except:
+        # Si le logo n'est pas trouvé, dessiner un logo de base
+        can.setFillColorRGB(0.8, 0.8, 0.8)
+        can.rect(20, 700, 30, 30, fill=1)
+        can.setStrokeColorRGB(245/255, 166/255, 35/255)
+        can.setLineWidth(3)
+        can.line(50, 715, 90, 695)
+        can.setFillColorRGB(192/255, 57/255, 43/255)
+        can.setFont("Helvetica-Bold", 16)
+        can.drawString(25, 660, "CNGE")
+        can.setFillColorRGB(245/255, 166/255, 35/255)
+        can.rect(15, 640, 40, 10, fill=1)
+        can.setFillColorRGB(1, 1, 1)
+        can.setFont("Helvetica-Bold", 10)
+        can.drawString(20, 642, "FORMATION")
 
-        # Dessiner la ligne orange
-        self.set_draw_color(245, 166, 35)  # Orange
-        self.set_line_width(3)
-        self.line(45, 25, 75, 5)  # Ligne orange diagonale
+    # Texte du diplôme
+    can.setFillColorRGB(0, 0, 0)
+    can.setFont("Helvetica", 12)
 
-        # Texte CNGE en rouge
-        self.set_text_color(192, 57, 43)  # Rouge
-        self.set_font("Arial", "B", 16)
-        self.text(25, 45, "CNGE")
-
-        # Fond orange pour FORMATION
-        self.set_fill_color(245, 166, 35)  # Orange
-        self.rect(15, 50, 40, 8, 'F')  # Fond orange
-
-        # Texte FORMATION en blanc
-        self.set_text_color(255, 255, 255)  # Blanc
-        self.set_font("Arial", "B", 12)
-        self.text(30, 55, "FORMATION")
-
-def creer_diplome(nom, prenom, score):
-    pdf = PDF()
-    pdf.add_page()
-
-    # Titre principal
-    pdf.set_text_color(0, 0, 0)  # Noir
-    pdf.set_font("Arial", "", 12)
-    pdf.ln(60)
-    pdf.cell(0, 10, "Hereby Certifies that", ln=True, align="C")
+    # Hereby Certifies that
+    can.drawString(100, 600, "Hereby Certifies that")
 
     # Nom du participant
-    pdf.ln(10)
-    pdf.set_font("Arial", "B", 18)
-    pdf.cell(0, 10, f"{prenom} {nom}", ln=True, align="C")
+    can.setFont("Helvetica-Bold", 16)
+    can.drawString(100, 570, nom_complet)
 
     # Texte du cours
-    pdf.ln(10)
-    pdf.set_font("Arial", "B", 14)
-    pdf.cell(0, 10, "has completed the e-learning course", ln=True, align="C")
-    pdf.ln(10)
-    pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 10, "RECHERCHE EN SOINS PREMIERS", ln=True, align="C")
-    pdf.set_font("Arial", "", 14)
-    pdf.cell(0, 10, "Formation aux bonnes pratiques cliniques", ln=True, align="C")
-    pdf.cell(0, 10, "(ICH E6 (R3))", ln=True, align="C")
+    can.setFont("Helvetica", 12)
+    can.drawString(100, 540, "has completed the e-learning course")
+
+    can.setFont("Helvetica-Bold", 14)
+    can.drawString(100, 510, "RECHERCHE EN SOINS PREMIERS")
+
+    can.setFont("Helvetica", 12)
+    can.drawString(100, 490, "Formation aux bonnes pratiques cliniques")
+    can.drawString(100, 470, "(ICH E6 (R3))")
 
     # Score
-    pdf.ln(10)
-    pdf.set_font("Arial", "", 12)
-    pdf.cell(0, 10, f"with a score of {int(score*100)}%", ln=True, align="C")
+    can.drawString(100, 440, f"with a score of {int(score*100)}%")
 
     # Date
-    pdf.ln(10)
-    today = date.today().strftime("%d/%m/%Y")
-    pdf.cell(0, 10, f"On {today}", ln=True, align="C")
+    can.drawString(100, 420, f"On {date_str}")
 
     # Texte de reconnaissance
-    pdf.ln(10)
-    pdf.set_font("Arial", "I", 10)
-    pdf.multi_cell(
-        0, 5,
-        "This e-learning course has been formally recognised for its quality and content by:\n\n"
-        "the following organisations and institutions",
-        align="C"
-    )
+    can.setFont("Helvetica-Oblique", 10)
+    can.drawString(100, 380, "This e-learning course has been formally recognised for its quality and content by:")
+    can.drawString(100, 360, "the following organisations and institutions")
+    can.drawString(100, 340, "Collège National des Généralistes Enseignants Formation")
+    can.drawString(100, 320, "https://www.cnge-formation.fr/")
 
-    # Texte Collège National
-    pdf.ln(5)
-    pdf.set_font("Arial", "", 10)
-    pdf.cell(0, 10, "Collège National des Généralistes Enseignants Formation", ln=True, align="C")
-    pdf.cell(0, 10, "https://www.cnge-formation.fr/", ln=True, align="C")
+    # Encadré TransCelerate avec bordure fine
+    can.setFont("Helvetica", 8)
+    can.setLineWidth(0.2)
+    can.rect(50, 280, 120, 30, stroke=1, fill=0)
 
-    # Texte TransCelerate avec bordure noire fine
-    pdf.ln(5)
-    pdf.set_font("Arial", "", 8)
-    pdf.set_draw_color(0, 0, 0)  # Noir pour la bordure
-    pdf.set_line_width(0.2)  # Trait fin
-    txt = ("This ICH E6 GCP Investigator Site Training meets the Minimum Criteria for "
-           "ICH GCP Investigator Site Personnel Training identified by TransCelerate BioPharma "
-           "as necessary to enable mutual recognition of GCP training among trial sponsors.")
-    pdf.multi_cell(0, 4, txt, border=1, align="C")
+    # Texte dans l'encadré
+    text = can.beginText(55, 290)
+    text.setFont("Helvetica", 8)
+    text.textLine("This ICH E6 GCP Investigator Site Training meets the Minimum Criteria for")
+    text.textLine("ICH GCP Investigator Site Personnel Training identified by TransCelerate BioPharma")
+    text.textLine("as necessary to enable mutual recognition of GCP training among trial sponsors.")
+    can.drawText(text)
 
     # Version
-    pdf.ln(5)
-    pdf.set_font("Arial", "I", 8)
-    pdf.cell(0, 5, "Version number 1-2025", ln=True, align="C")
+    can.setFont("Helvetica-Oblique", 8)
+    can.drawString(100, 250, "Version number 1-2025")
 
-    return pdf.output(dest="S").encode("latin-1")
+    can.save()
+    packet.seek(0)
+    return packet.getvalue()
 
 # Gestion de la session
 if "step" not in st.session_state:
@@ -213,16 +200,19 @@ if st.session_state.step == "quiz":
             else:
                 st.error(f"{q} → Ta réponse : {user} | Bonne réponse : {bonne}")
 
-        pdf_bytes = creer_diplome(st.session_state.nom, st.session_state.prenom, score/len(questions))
+        # Générer le PDF
+        nom_complet = f"{st.session_state.prenom} {st.session_state.nom}"
+        date_str = date.today().strftime("%d/%m/%Y")
+        pdf_bytes = creer_pdf(nom_complet, score/len(questions), date_str)
+
         if pdf_bytes:
             st.download_button(
                 "Télécharger le diplôme PDF",
                 pdf_bytes,
-                file_name="diplome_CNGE.pdf",
+                file_name=f"diplome_{st.session_state.nom}_{st.session_state.prenom}.pdf",
                 mime="application/pdf"
             )
 
     if st.button("🔁 Refaire le QCM"):
         st.session_state.reponses_quiz = [None] * len(questions)
         st.rerun()
-
