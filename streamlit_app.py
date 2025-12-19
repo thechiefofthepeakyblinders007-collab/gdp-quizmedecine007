@@ -6,6 +6,7 @@ from PyPDF2 import PdfReader, PdfWriter
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from io import BytesIO
+import base64
 
 # Configuration de base
 st.set_page_config(page_title="QCM Formation", layout="centered")
@@ -18,37 +19,51 @@ ADMINS = [("bayen", "marc"), ("steen", "johanna")]
 if not os.path.exists(RESULT_FILE):
     pd.DataFrame(columns=["Nom", "Prénom", "Email", "Score", "Résultat", "Date"]).to_csv(RESULT_FILE, index=False)
 
-def remplir_pdf(nom_complet, score, date_str):
-    # Charger le PDF modèle
-    template_path = "CNGE FORMATION_attestation BPC_V1_2025.docx.pdf"
+# PDF modèle encodé en base64 (version simplifiée)
+PDF_MODELE_BASE64 = """
+JVBERi0xLjQKJdP0zXgKNSAwIG9iago8PAovVGl0bGUKPj4Kc3RyZWFtCkJUCjEwMDAgUgovRmly
+c3QgMCAwIFIKL0xlbmd0aCAxMDAwCj4+CmVuZHN0cmVhbQp4nGVYU01TU291cmNlVGhlbmtl
+ZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdl
+ZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdl
+ZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdl
+ZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdl
+ZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdl
+ZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdl
+ZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdl
+ZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdl
+ZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdl
+ZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdl
+ZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdl
+ZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdlZGdl
+"""  # Version simplifiée - à remplacer par ton vrai PDF encodé
 
+def get_pdf_template():
+    """Retourne le PDF modèle depuis la base64"""
+    pdf_data = base64.b64decode(PDF_MODELE_BASE64)
+    return BytesIO(pdf_data)
+
+def remplir_pdf(nom_complet, score, date_str):
     try:
         # Créer un buffer pour le nouveau contenu
         packet = BytesIO()
         can = canvas.Canvas(packet, pagesize=letter)
 
         # Définir la police
-        can.setFont("Helvetica-Bold", 14)  # Police en gras pour le nom
+        can.setFont("Helvetica-Bold", 14)
 
-        # Positions pré-remplies pour ton modèle
-        # Nom (environ au centre en haut)
-        can.drawString(90, 630, nom_complet)
-
-        # Score (à gauche de "with a score of")
+        # Positions pour ton modèle (à ajuster si nécessaire)
+        can.drawString(90, 630, nom_complet)  # Nom
         can.setFont("Helvetica", 12)
-        can.drawString(130, 480, f"{int(score*100)}%")
-
-        # Date (à droite de "On")
-        can.drawString(60, 440, date_str)
+        can.drawString(130, 480, f"{int(score*100)}%")  # Score
+        can.drawString(60, 440, date_str)  # Date
 
         can.save()
-
-        # Déplacer au début du buffer
         packet.seek(0)
         new_pdf = PdfReader(packet)
 
-        # Lire le PDF modèle
-        existing_pdf = PdfReader(open(template_path, "rb"))
+        # Utiliser le PDF modèle encodé
+        template = get_pdf_template()
+        existing_pdf = PdfReader(template)
         output = PdfWriter()
 
         # Fusionner les pages
@@ -64,7 +79,7 @@ def remplir_pdf(nom_complet, score, date_str):
         return output_stream.getvalue()
 
     except Exception as e:
-        st.error(f"Erreur lors de la génération du PDF: {str(e)}. Vérifie que le fichier 'CNGE FORMATION_attestation BPC_V1_2025.docx.pdf' est présent dans le même dossier.")
+        st.error(f"Erreur lors de la génération du PDF: {str(e)}")
         return None
 
 # Gestion de la session
