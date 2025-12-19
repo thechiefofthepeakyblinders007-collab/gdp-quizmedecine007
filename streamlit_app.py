@@ -16,7 +16,8 @@ if not os.path.exists(RESULT_FILE):
         columns=["Nom", "Prénom", "Email", "Score", "Résultat"]
     ).to_csv(RESULT_FILE, index=False)
 
-def creer_diplome(nom, prenom, score):
+# ================= PDF =================
+def creer_diplome(nom, prenom, score_ratio):
     pdf = FPDF()
     pdf.add_page()
 
@@ -43,11 +44,10 @@ def creer_diplome(nom, prenom, score):
     )
 
     pdf.ln(6)
-    pdf.cell(0, 8, f"with a score of {int(score * 100)} %", ln=True, align="C")
+    pdf.cell(0, 8, f"with a score of {int(score_ratio * 100)} %", ln=True, align="C")
 
     pdf.ln(6)
-    today = date.today().strftime("%d/%m/%Y")
-    pdf.cell(0, 8, f"On {today}", ln=True, align="C")
+    pdf.cell(0, 8, f"On {date.today().strftime('%d/%m/%Y')}", ln=True, align="C")
 
     pdf.ln(12)
     pdf.set_font("Arial", "", 10)
@@ -68,28 +68,26 @@ def creer_diplome(nom, prenom, score):
         align="C"
     )
 
-    # ✅ LIGNE CORRECTE
+    # fpdf2 retourne déjà un bytearray
     return pdf.output(dest="S")
-
-
 
 # ================= SESSION =================
 if "step" not in st.session_state:
     st.session_state.step = "login"
 
+for key in ["nom", "prenom", "email"]:
+    if key not in st.session_state:
+        st.session_state[key] = ""
+
 # ================= LOGIN =================
 if st.session_state.step == "login":
-
-    for key in ["nom", "prenom", "email"]:
-        if key not in st.session_state:
-            st.session_state[key] = ""
 
     st.session_state.nom = st.text_input("Nom", st.session_state.nom)
     st.session_state.prenom = st.text_input("Prénom", st.session_state.prenom)
     st.session_state.email = st.text_input("Email", st.session_state.email)
 
     if st.button("Commencer le QCM"):
-        if st.session_state.nom == "" or st.session_state.prenom == "" or st.session_state.email == "":
+        if not all([st.session_state.nom, st.session_state.prenom, st.session_state.email]):
             st.warning("Merci de remplir tous les champs")
         else:
             st.session_state.step = "quiz"
@@ -194,13 +192,13 @@ if st.session_state.step == "quiz":
     ]
 
     if "reponses" not in st.session_state:
-        st.session_state.reponses = [None] * len(questions)
+        st.session_state.reponses = [[] for _ in questions]
 
     for i, (question, options, _) in enumerate(questions):
         st.session_state.reponses[i] = st.multiselect(
             question,
             options,
-            default=[],
+            default=st.session_state.reponses[i],
             key=f"q{i}"
         )
 
@@ -212,26 +210,27 @@ if st.session_state.step == "quiz":
             if set(st.session_state.reponses[i]) == set(bonnes_labels):
                 score += 1
 
-        resultat = "Réussi" if score >= 7 else "Échoué"
+        ratio = score / len(questions)
+        resultat = "Réussi" if ratio >= 0.7 else "Échoué"
 
         df = pd.read_csv(RESULT_FILE)
         df.loc[len(df)] = [
             st.session_state.nom,
             st.session_state.prenom,
             st.session_state.email,
-            f"{score}/9",
+            f"{score}/{len(questions)}",
             resultat
         ]
         df.to_csv(RESULT_FILE, index=False)
 
         st.markdown("---")
-        st.subheader(f"Score : {score}/9 — {resultat}")
+        st.subheader(f"Score : {score}/{len(questions)} — {resultat}")
 
         if resultat == "Réussi":
             pdf = creer_diplome(
                 st.session_state.nom,
                 st.session_state.prenom,
-                score
+                ratio
             )
             st.download_button(
                 "📄 Télécharger l’attestation CNGE",
@@ -240,5 +239,5 @@ if st.session_state.step == "quiz":
             )
 
     if st.button("🔁 Refaire le QCM"):
-        st.session_state.reponses = [None] * len(questions)
+        st.session_state.reponses = [[] for _ in questions]
         st.experimental_rerun()
