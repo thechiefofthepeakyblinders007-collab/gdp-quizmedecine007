@@ -15,58 +15,98 @@ ADMINS = [("bayen", "marc"), ("steen", "johanna")]
 if not os.path.exists(RESULT_FILE):
     pd.DataFrame(columns=["Nom", "Prénom", "Email", "Score", "Résultat", "Date"]).to_csv(RESULT_FILE, index=False)
 
-# Fonction pour créer le diplôme PDF
+# Classe personnalisée pour le PDF
+class PDF(FPDF):
+    def header(self):
+        # Logo CNGE FORMATION
+        self.set_fill_color(255, 255, 255)
+        self.rect(80, 10, 50, 30, 'DF')  # Fond blanc
+
+        # Carré orange
+        self.set_draw_color(245, 166, 35)
+        self.set_line_width(2)
+        self.line(80, 20, 130, 20)  # Ligne horizontale haute
+        self.line(80, 20, 80, 40)   # Ligne verticale gauche
+        self.line(130, 20, 130, 40) # Ligne verticale droite
+        self.line(80, 40, 130, 40)  # Ligne horizontale basse
+
+        # Courbe orange
+        self.set_draw_color(245, 166, 35)
+        self.curved_line(130, 20, 140, 10, 150, 20)
+
+        # Texte CNGE en rouge
+        self.set_text_color(192, 57, 43)
+        self.set_font("Arial", "B", 14)
+        self.text(90, 45, "CNGE")
+
+        # Texte FORMATION en orange
+        self.set_text_color(245, 166, 35)
+        self.set_font("Arial", "B", 14)
+        self.text(85, 55, "FORMATION")
+
+    def curved_line(self, x1, y1, x2, y2, x3, y3):
+        self._out(f"{x1:.2f} {y1:.2f} m {x2:.2f} {y2:.2f} {x3:.2f} {y3:.2f} c S")
+
 def creer_diplome(nom, prenom, score):
-    pdf = FPDF()
+    pdf = PDF()
     pdf.add_page()
 
-    pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 12, "CNGE FORMATION", ln=True, align="C")
-
-    pdf.ln(10)
+    # Titre principal
+    pdf.ln(50)
     pdf.set_font("Arial", "", 12)
-    pdf.cell(0, 8, "Hereby Certifies that", ln=True, align="C")
+    pdf.cell(0, 10, "Hereby Certifies that", ln=True, align="C")
 
+    # Nom du participant
     pdf.ln(10)
-    pdf.set_font("Arial", "B", 18)
+    pdf.set_font("Arial", "B", 16)
     pdf.cell(0, 10, f"{prenom} {nom}", ln=True, align="C")
 
+    # Texte du cours
+    pdf.ln(10)
+    pdf.set_font("Arial", "B", 14)
+    pdf.cell(0, 10, "has completed the e-learning course", ln=True, align="C")
+    pdf.ln(10)
+    pdf.set_font("Arial", "B", 16)
+    pdf.cell(0, 10, "RECHERCHE EN SOINS PREMIERS", ln=True, align="C")
+    pdf.set_font("Arial", "", 14)
+    pdf.cell(0, 10, "Formation aux bonnes pratiques cliniques", ln=True, align="C")
+    pdf.cell(0, 10, "(ICH E6 (R3))", ln=True, align="C")
+
+    # Score
     pdf.ln(10)
     pdf.set_font("Arial", "", 12)
-    pdf.multi_cell(
-        0, 8,
-        "has completed the e-learning course\n\n"
-        "RECHERCHE EN SOINS PREMIERS\n"
-        "Formation aux bonnes pratiques cliniques\n"
-        "(ICH E6 (R3))",
-        align="C"
-    )
+    pdf.cell(0, 10, f"with a score of {int(score*100)}%", ln=True, align="C")
 
-    pdf.ln(6)
-    pdf.cell(0, 8, f"with a score of {score * 10} %", ln=True, align="C")
-
-    pdf.ln(6)
+    # Date
+    pdf.ln(10)
     today = date.today().strftime("%d/%m/%Y")
-    pdf.cell(0, 8, f"On {today}", ln=True, align="C")
+    pdf.cell(0, 10, f"On {today}", ln=True, align="C")
 
-    pdf.ln(12)
-    pdf.set_font("Arial", "", 10)
+    # Texte de reconnaissance
+    pdf.ln(10)
+    pdf.set_font("Arial", "I", 10)
     pdf.multi_cell(
-        0, 6,
-        "This ICH E6 GCP Investigator Site Training meets the Minimum Criteria for "
-        "ICH GCP Investigator Site Personnel Training identified by TransCelerate BioPharma "
-        "as necessary to enable mutual recognition of GCP training among trial sponsors.",
-        align="C"
-    )
-
-    pdf.ln(6)
-    pdf.multi_cell(
-        0, 6,
+        0, 5,
+        "This e-learning course has been formally recognised for its quality and content by:\n\n"
+        "the following organisations and institutions\n\n"
         "Collège National des Généralistes Enseignants Formation\n"
-        "https://www.cnge-formation.fr/\n\n"
-        "Version number 1-2025",
+        "https://www.cnge-formation.fr/",
         align="C"
     )
+
+    # Texte TransCelerate
+    pdf.ln(5)
+    pdf.set_font("Arial", "", 8)
+    pdf.set_fill_color(230, 230, 230)
+    txt = ("This ICH E6 GCP Investigator Site Training meets the Minimum Criteria for "
+           "ICH GCP Investigator Site Personnel Training identified by TransCelerate BioPharma "
+           "as necessary to enable mutual recognition of GCP training among trial sponsors.")
+    pdf.multi_cell(0, 4, txt, border=1, align="C", fill=True)
+
+    # Version
+    pdf.ln(5)
+    pdf.set_font("Arial", "I", 8)
+    pdf.cell(0, 5, "Version number 1-2025", ln=True, align="C")
 
     return pdf.output(dest="S").encode("latin-1")
 
@@ -182,4 +222,3 @@ if st.session_state.step == "quiz":
     if st.button("🔁 Refaire le QCM"):
         st.session_state.reponses_quiz = [None] * len(questions)
         st.experimental_rerun()
-
