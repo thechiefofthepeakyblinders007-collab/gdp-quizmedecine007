@@ -1,210 +1,242 @@
-import os
 import streamlit as st
 import pandas as pd
+from fpdf import FPDF
 from datetime import date
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
-from io import BytesIO
+import os
 
-# Configuration de base
-st.set_page_config(page_title="QCM Formation", layout="centered")
-st.title("QCM - Recherche en Soins Premiers")
+# ================= CONFIG =================
+st.set_page_config(page_title="QCM CNGE – BPC ICH E6 R3", layout="centered")
+st.title("QCM – Recherche en Soins Premiers")
 
 RESULT_FILE = "resultats_quiz.csv"
-ADMINS = [("bayen", "marc"), ("steen", "johanna")]
 
-# Initialisation du fichier CSV
+# ================= CSV =================
 if not os.path.exists(RESULT_FILE):
-    pd.DataFrame(columns=["Nom", "Prénom", "Email", "Score", "Résultat", "Date"]).to_csv(RESULT_FILE, index=False)
+    pd.DataFrame(
+        columns=["Nom", "Prénom", "Email", "Score", "Résultat"]
+    ).to_csv(RESULT_FILE, index=False)
 
-def creer_pdf(nom_complet, score, date_str):
-    # Créer un nouveau PDF
-    packet = BytesIO()
-    can = canvas.Canvas(packet, pagesize=letter)
+# ================= PDF DIPLOME =================
+def creer_diplome(nom, prenom, score):
+    pdf = FPDF()
+    pdf.add_page()
 
-    # Dessiner le logo CNGE FORMATION
-    can.setFillColorRGB(0.8, 0.8, 0.8)  # Gris
-    can.rect(20, 700, 30, 30, fill=1)  # Carré gris
-    can.setStrokeColorRGB(245/255, 166/255, 35/255)  # Orange
-    can.setLineWidth(3)
-    can.line(50, 715, 90, 695)  # Ligne orange diagonale
+    pdf.set_font("Arial", "B", 16)
+    pdf.cell(0, 12, "CNGE FORMATION", ln=True, align="C")
 
-    # Texte CNGE en rouge
-    can.setFillColorRGB(192/255, 57/255, 43/255)  # Rouge
-    can.setFont("Helvetica-Bold", 14)
-    can.drawString(25, 660, "CNGE")
+    pdf.ln(10)
+    pdf.set_font("Arial", "", 12)
+    pdf.cell(0, 8, "Hereby Certifies that", ln=True, align="C")
 
-    # Fond orange pour FORMATION
-    can.setFillColorRGB(245/255, 166/255, 35/255)  # Orange
-    can.rect(15, 640, 40, 10, fill=1)
+    pdf.ln(10)
+    pdf.set_font("Arial", "B", 18)
+    pdf.cell(0, 10, f"{prenom} {nom}", ln=True, align="C")
 
-    # Texte FORMATION en blanc
-    can.setFillColorRGB(1, 1, 1)  # Blanc
-    can.setFont("Helvetica-Bold", 10)
-    can.drawString(20, 642, "FORMATION")
+    pdf.ln(10)
+    pdf.set_font("Arial", "", 12)
+    pdf.multi_cell(
+        0, 8,
+        "has completed the e-learning course\n\n"
+        "RECHERCHE EN SOINS PREMIERS\n"
+        "Formation aux bonnes pratiques cliniques\n"
+        "(ICH E6 (R3))",
+        align="C"
+    )
 
-    # Texte du diplôme
-    can.setFillColorRGB(0, 0, 0)  # Noir
-    can.setFont("Helvetica", 12)
-    can.drawString(100, 600, "Hereby Certifies that")
+    pdf.ln(6)
+    pdf.cell(0, 8, f"with a score of {score * 10} %", ln=True, align="C")
 
-    can.setFont("Helvetica-Bold", 16)
-    can.drawString(100, 570, nom_complet)
+    pdf.ln(6)
+    today = date.today().strftime("%d/%m/%Y")
+    pdf.cell(0, 8, f"On {today}", ln=True, align="C")
 
-    can.setFont("Helvetica", 12)
-    can.drawString(100, 540, "has completed the e-learning course")
+    pdf.ln(12)
+    pdf.set_font("Arial", "", 10)
+    pdf.multi_cell(
+        0, 6,
+        "This ICH E6 GCP Investigator Site Training meets the Minimum Criteria for "
+        "ICH GCP Investigator Site Personnel Training identified by TransCelerate BioPharma "
+        "as necessary to enable mutual recognition of GCP training among trial sponsors.",
+        align="C"
+    )
 
-    can.setFont("Helvetica-Bold", 14)
-    can.drawString(100, 510, "RECHERCHE EN SOINS PREMIERS")
-    can.setFont("Helvetica", 12)
-    can.drawString(100, 490, "Formation aux bonnes pratiques cliniques")
-    can.drawString(100, 470, "(ICH E6 (R3))")
+    pdf.ln(6)
+    pdf.multi_cell(
+        0, 6,
+        "Collège National des Généralistes Enseignants Formation\n"
+        "https://www.cnge-formation.fr/\n\n"
+        "Version number 1-2025",
+        align="C"
+    )
 
-    # Score
-    can.drawString(100, 440, f"with a score of {int(score*100)}%")
+    return pdf.output(dest="S").encode("latin-1")
 
-    # Date
-    can.drawString(100, 420, f"On {date_str}")
-
-    # Texte de reconnaissance
-    can.setFont("Helvetica-Oblique", 10)
-    can.drawString(100, 380, "This e-learning course has been formally recognised for its quality and content by:")
-    can.drawString(100, 360, "the following organisations and institutions")
-    can.drawString(100, 340, "Collège National des Généralistes Enseignants Formation")
-    can.drawString(100, 320, "https://www.cnge-formation.fr/")
-
-    # Encadré TransCelerate
-    can.setFont("Helvetica", 8)
-    can.rect(50, 280, 120, 30, stroke=1, fill=0)
-    text = can.beginText(55, 290)
-    text.textLine("This ICH E6 GCP Investigator Site Training meets the Minimum Criteria for")
-    text.textLine("ICH GCP Investigator Site Personnel Training identified by TransCelerate BioPharma")
-    text.textLine("as necessary to enable mutual recognition of GCP training among trial sponsors.")
-    can.drawText(text)
-
-    # Version
-    can.setFont("Helvetica-Oblique", 8)
-    can.drawString(100, 250, "Version number 1-2025")
-
-    can.save()
-    packet.seek(0)
-    return packet.getvalue()
-
-# Gestion de la session
+# ================= SESSION =================
 if "step" not in st.session_state:
     st.session_state.step = "login"
 
-# Page de login
+# ================= LOGIN =================
 if st.session_state.step == "login":
-    for key in ["nom_input", "prenom_input", "email_input"]:
+
+    for key in ["nom", "prenom", "email"]:
         if key not in st.session_state:
             st.session_state[key] = ""
 
-    nom = st.text_input("Nom", value=st.session_state.nom_input)
-    prenom = st.text_input("Prénom", value=st.session_state.prenom_input)
-    is_admin = (nom.lower(), prenom.lower()) in [(a[0].lower(), a[1].lower()) for a in ADMINS]
-    email = st.text_input("Email", value=st.session_state.email_input) if not is_admin else ""
+    st.session_state.nom = st.text_input("Nom", st.session_state.nom)
+    st.session_state.prenom = st.text_input("Prénom", st.session_state.prenom)
+    st.session_state.email = st.text_input("Email", st.session_state.email)
 
-    if st.button("Continuer"):
-        st.session_state.nom_input = nom.strip()
-        st.session_state.prenom_input = prenom.strip()
-        st.session_state.email_input = email.strip()
-
-        if not st.session_state.nom_input or not st.session_state.prenom_input:
-            st.warning("Merci de remplir le nom et le prénom")
-        elif not is_admin and not st.session_state.email_input:
-            st.warning("Merci de renseigner votre email")
+    if st.button("Commencer le QCM"):
+        if st.session_state.nom == "" or st.session_state.prenom == "" or st.session_state.email == "":
+            st.warning("Merci de remplir tous les champs")
         else:
-            st.session_state.nom = st.session_state.nom_input
-            st.session_state.prenom = st.session_state.prenom_input
-            st.session_state.email = st.session_state.email_input
-            st.session_state.is_admin = is_admin
-            st.session_state.step = "admin" if is_admin else "quiz"
+            st.session_state.step = "quiz"
 
-# Page admin
-if st.session_state.step == "admin":
-    st.subheader("Résultats des participants")
-    df = pd.read_csv(RESULT_FILE)
-    st.dataframe(df)
-
-    if st.button("Réinitialiser la liste"):
-        df.iloc[0:0].to_csv(RESULT_FILE, index=False)
-        st.success("Liste effacée")
-
-# Page quiz avec questions Oui/Non
+# ================= QUIZ =================
 if st.session_state.step == "quiz":
-    st.subheader(f"Bienvenue {st.session_state.prenom} {st.session_state.nom}")
+
+    st.subheader(f"Participant : {st.session_state.prenom} {st.session_state.nom}")
 
     questions = [
-        ("Les Bonnes Pratiques Cliniques visent-elles à protéger les sujets de recherche ?", ["Oui", "Non"], 0),
-        ("L'investigateur principal est-il responsable de la conduite de l'essai sur un lieu précis ?", ["Oui", "Non"], 0),
-        ("Le promoteur est-il responsable de la gestion de l'essai ?", ["Oui", "Non"], 0),
-        ("Le protocole de recherche doit-il décrire le rationnel scientifique ?", ["Oui", "Non"], 0),
-        ("Les données sources doivent-elles être attribuables ?", ["Oui", "Non"], 0)
+        (
+            "Buts des BPC – Quels sont les buts principaux des BPC (ICH E6 R3) ?",
+            [
+                "La protection des sujets de recherche",
+                "Le conditionnement optimal des médicaments",
+                "La crédibilité des résultats",
+                "La confidentialité des données personnelles",
+                "La communication avec les instances réglementaires"
+            ],
+            [0, 2, 3]
+        ),
+        (
+            "Investigateur – Qui est l’investigateur ?",
+            [
+                "La personne qui réalise les recherches bibliographiques",
+                "La personne responsable de la conduite de l’essai sur un lieu précis",
+                "La personne en charge du respect des règles éthiques",
+                "La personne qui finance l’essai"
+            ],
+            [1]
+        ),
+        (
+            "Investigateur principal – Qu’est-ce qu’un investigateur principal ?",
+            [
+                "La promotion des résultats",
+                "La gestion de l’essai",
+                "Le financement de l’essai",
+                "L’initiative de l’essai"
+            ],
+            [1]
+        ),
+        (
+            "Responsabilité du promoteur – Quelle est sa responsabilité ?",
+            [
+                "Les principes éthiques sont conformes à la déclaration de Genève",
+                "La balance bénéfice/risque est favorable",
+                "Les intérêts de la société prévalent sur ceux des sujets",
+                "L’expérimentation préclinique est suffisante"
+            ],
+            [1, 3]
+        ),
+        (
+            "Principes BPC – Avant le début de l’essai",
+            [
+                "Les soins sont placés sous la responsabilité d’une personne compétente",
+                "Le consentement libre et éclairé est recueilli",
+                "Le médicament est efficace",
+                "La confidentialité des informations est protégée"
+            ],
+            [0, 1, 3]
+        ),
+        (
+            "Validation des compétences – Comment valide-t-on les compétences ?",
+            [
+                "Par l’obtention d’un diplôme",
+                "Par la validation d’un module de formation BPC",
+                "Par une formation continue",
+                "Par l’exercice professionnel",
+                "Par la participation à des groupes de pairs"
+            ],
+            [1]
+        ),
+        (
+            "Inclusion sans consentement – Est-ce possible ?",
+            [
+                "Non",
+                "Oui avec attestation d’un tiers indépendant",
+                "Oui avec avis du comité d’éthique"
+            ],
+            [2]
+        ),
+        (
+            "Protocole de recherche – Quelles obligations ?",
+            [
+                "Il n’est pas indispensable",
+                "Il décrit le rationnel scientifique",
+                "Avis favorable du comité d’éthique",
+                "Avis favorable de l’autorité réglementaire",
+                "Il décrit l’usage des médicaments"
+            ],
+            [1, 2, 3, 4]
+        ),
+        (
+            "Suivi de la recherche – Quels principes ?",
+            [
+                "Seules les données médicaments sont consignées",
+                "Toutes les données sont consignées",
+                "Des procédures qualité sont mises en place"
+            ],
+            [1, 2]
+        )
     ]
 
-    if "reponses_quiz" not in st.session_state:
-        st.session_state.reponses_quiz = [None] * len(questions)
+    if "reponses" not in st.session_state:
+        st.session_state.reponses = [None] * len(questions)
 
-    for i, (q, options, bonne) in enumerate(questions):
-        st.session_state.reponses_quiz[i] = st.radio(
-            q,
-            options=options,
-            index=None if st.session_state.reponses_quiz[i] is None else options.index(st.session_state.reponses_quiz[i]),
+    for i, (question, options, _) in enumerate(questions):
+        st.session_state.reponses[i] = st.multiselect(
+            question,
+            options,
+            default=[],
             key=f"q{i}"
         )
 
     if st.button("Valider le QCM"):
         score = 0
-        corrections = []
 
-        for i, (q, options, bonne) in enumerate(questions):
-            user_rep = st.session_state.reponses_quiz[i]
-            bonne_rep = options[bonne]
-            if user_rep == bonne_rep:
+        for i, (_, options, bonnes) in enumerate(questions):
+            bonnes_labels = [options[j] for j in bonnes]
+            if set(st.session_state.reponses[i]) == set(bonnes_labels):
                 score += 1
-            corrections.append((q, user_rep, bonne_rep, user_rep == bonne_rep))
 
-        resultat = "Réussi" if score >= 3 else "Échoué"
+        resultat = "Réussi" if score >= 7 else "Échoué"
 
-        # Enregistrement CSV
-        new_row = {
-            "Nom": st.session_state.nom,
-            "Prénom": st.session_state.prenom,
-            "Email": st.session_state.email,
-            "Score": f"{score}/{len(questions)}",
-            "Résultat": resultat,
-            "Date": date.today().strftime("%d/%m/%Y")
-        }
-
-        new_row_df = pd.DataFrame([new_row])
-        new_row_df.to_csv(RESULT_FILE, mode='a', header=False, index=False)
+        df = pd.read_csv(RESULT_FILE)
+        df.loc[len(df)] = [
+            st.session_state.nom,
+            st.session_state.prenom,
+            st.session_state.email,
+            f"{score}/9",
+            resultat
+        ]
+        df.to_csv(RESULT_FILE, index=False)
 
         st.markdown("---")
-        st.subheader(f"Score : {score}/{len(questions)} — {resultat}")
+        st.subheader(f"Score : {score}/9 — {resultat}")
 
-        st.markdown("### Correction détaillée")
-        for q, user, bonne, ok in corrections:
-            if ok:
-                st.success(f"{q} → Bonne réponse : {bonne}")
-            else:
-                st.error(f"{q} → Ta réponse : {user} | Bonne réponse : {bonne}")
-
-        # Générer le PDF
-        nom_complet = f"{st.session_state.prenom} {st.session_state.nom}"
-        date_str = date.today().strftime("%d/%m/%Y")
-        pdf_bytes = creer_pdf(nom_complet, score/len(questions), date_str)
-
-        if pdf_bytes:
+        if resultat == "Réussi":
+            pdf = creer_diplome(
+                st.session_state.nom,
+                st.session_state.prenom,
+                score
+            )
             st.download_button(
-                "Télécharger le diplôme PDF",
-                pdf_bytes,
-                file_name=f"diplome_{st.session_state.nom}_{st.session_state.prenom}.pdf",
-                mime="application/pdf"
+                "📄 Télécharger l’attestation CNGE",
+                pdf,
+                file_name="attestation_CNGE_BPC.pdf"
             )
 
     if st.button("🔁 Refaire le QCM"):
-        st.session_state.reponses_quiz = [None] * len(questions)
-        st.rerun()
-
-
+        st.session_state.reponses = [None] * len(questions)
+        st.experimental_rerun()
